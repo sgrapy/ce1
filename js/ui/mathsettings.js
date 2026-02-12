@@ -54,17 +54,19 @@ export function renderMathSettings(type, values = {}){
   const title = $("mathTitle");
   if (!box || !title) return;
 
-  // ADD / SUB (inchangé)
+  // ADD / SUB
   if (type === "add" || type === "sub"){
-    title.textContent = type === "add" ? "Réglages (Addition)" : "Réglages (Soustraction)";
+    const isAdd = type === "add";
+    const defaultMax = isAdd ? 10 : 69;
+    title.textContent = isAdd ? "Réglages (➕ Addition)" : "Réglages (➖ Soustraction)";
     box.innerHTML = `
-      <div class="field"><label>aMin</label><input id="aMin" class="mini" type="number" value="${values.aMin ?? 0}"></div>
-      <div class="field"><label>aMax</label><input id="aMax" class="mini" type="number" value="${values.aMax ?? 69}"></div>
-      <div class="field"><label>bMin</label><input id="bMin" class="mini" type="number" value="${values.bMin ?? 0}"></div>
-      <div class="field"><label>bMax</label><input id="bMax" class="mini" type="number" value="${values.bMax ?? 69}"></div>
+      <div class="field"><label>aMin</label><input id="aMin" class="mini" type="number" min="0" max="69" value="${values.aMin ?? 0}"></div>
+      <div class="field"><label>aMax</label><input id="aMax" class="mini" type="number" min="0" max="69" value="${values.aMax ?? defaultMax}"></div>
+      <div class="field"><label>bMin</label><input id="bMin" class="mini" type="number" min="0" max="69" value="${values.bMin ?? 0}"></div>
+      <div class="field"><label>bMax</label><input id="bMax" class="mini" type="number" min="0" max="69" value="${values.bMax ?? defaultMax}"></div>
 
       <div class="field">
-        <label>Sans retenue (unités)</label>
+        <label>${isAdd ? "Sans retenue (unités)" : "Sans emprunt (unités)"}</label>
         <select id="noCarryUnits" class="mini">
           <option value="true" ${(values.noCarryUnits ?? true) ? "selected" : ""}>Oui</option>
           <option value="false" ${values.noCarryUnits === false ? "selected" : ""}>Non</option>

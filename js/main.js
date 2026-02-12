@@ -14,6 +14,7 @@ import { loadStatsStore, addSessionToStore, resetStatsStore, formatDateShort } f
 
 import { createEngine } from "./engine/engine.js";
 import { makeSkillLabel as makeAddLabel } from "./engine/questions/addition.js";
+import { makeSkillLabel as makeSubLabel } from "./engine/questions/subtraction.js";
 import { makeSkillLabel as makeMulLabel } from "./engine/questions/multiplication.js";
 
 // ------------------------------------------------------------
@@ -157,9 +158,12 @@ function showExplain(playerIndex, question, res){
   const isExpert = !!SESSION?.expertMode;
   const showExplainOption = !!SESSION?.showExplain;
 
-  const resultText = question?.kind === "multiplication"
-    ? `${question.a} × ${question.b} = ${question.answer}`
-    : `${question.a} + ${question.b} = ${question.answer}`;
+  const op = (question?.kind === "multiplication")
+    ? "×"
+    : (question?.kind === "subtraction")
+      ? "−"
+      : "+";
+  const resultText = `${question.a} ${op} ${question.b} = ${question.answer}`;
 
   // ✅ BONNE RÉPONSE → badge + étoiles + résultat
   if (isCorrect){
@@ -271,13 +275,14 @@ function readExerciseSettings(exerciseType, durationSec){
   const choices = Number($("choices")?.value || 3);
   const qTimeSec = Number($("qTimeSec")?.value || 6);
 
-  if (exerciseType === "add"){
+  if (exerciseType === "add" || exerciseType === "sub"){
+    const defaultMax = exerciseType === "add" ? 10 : 69;
     return {
-      type: "add",
+      type: exerciseType,
       aMin: Number($("aMin")?.value ?? 0),
-      aMax: Number($("aMax")?.value ?? 69),
+      aMax: Number($("aMax")?.value ?? defaultMax),
       bMin: Number($("bMin")?.value ?? 0),
-      bMax: Number($("bMax")?.value ?? 69),
+      bMax: Number($("bMax")?.value ?? defaultMax),
       noCarryUnits: ($("noCarryUnits")?.value ?? "true") === "true",
       choices,
       qTimeSec,
@@ -297,8 +302,8 @@ function readExerciseSettings(exerciseType, durationSec){
 
   return {
     type: "add",
-    aMin: 0, aMax: 69,
-    bMin: 0, bMax: 69,
+    aMin: 0, aMax: 10,
+    bMin: 0, bMax: 10,
     noCarryUnits: true,
     choices: 3,
     qTimeSec: 6,
@@ -307,7 +312,11 @@ function readExerciseSettings(exerciseType, durationSec){
 }
 
 function makeHudSkill(exerciseType, settings, difficultyLevel = 0){
-  const base = (exerciseType === "mul") ? makeMulLabel(settings) : makeAddLabel(settings);
+  const base = (exerciseType === "mul")
+    ? makeMulLabel(settings)
+    : (exerciseType === "sub")
+      ? makeSubLabel(settings)
+      : makeAddLabel(settings);
   return difficultyLevel > 0 ? `${base} • 🎮 niveau ${difficultyLevel}` : base;
 }
 
@@ -889,9 +898,41 @@ function syncGameModeUI(){
   $("raceTargetWrap")?.classList.toggle("hidden", mode !== "race");
 }
 
+function isAdvancedOptionsView(){
+  const adv = $("optionsAdvanced");
+  if (!adv) return false;
+  return !adv.classList.contains("hidden");
+}
+
+function setAdvancedOptionsView(advancedOnly){
+  const quick = $("optionsQuick");
+  const adv = $("optionsAdvanced");
+  const btn = $("btnAdvancedOnly");
+  const title = $("optionsTitle");
+  const desc = $("optionsDesc");
+
+  if (quick) quick.classList.toggle("hidden", !!advancedOnly);
+  if (adv) adv.classList.toggle("hidden", !advancedOnly);
+
+  if (title) title.textContent = advancedOnly ? "🧠 Options avancées" : "⚡ Options rapides";
+  if (desc) desc.textContent = advancedOnly
+    ? "Réglages pour aller plus loin (prof / experts)"
+    : "Réglages essentiels pour démarrer vite";
+
+  if (btn) btn.textContent = advancedOnly
+    ? "⚡ Afficher les options rapides"
+    : "⚙️ Afficher seulement les options avancées";
+
+  // équipe: n'afficher le bloc "nombre d'équipes" que si on est en vue avancée
+  // et que le mode équipe est activé.
+  const tm = $("teamMode")?.checked;
+  $("teamOptions")?.classList.toggle("hidden", !(advancedOnly && tm));
+}
+
 function syncTeamUI(){
   const teamMode = $("teamMode")?.checked;
-  $("teamOptions")?.classList.toggle("hidden", !teamMode);
+  // "Nombre d'équipes" seulement dans la vue avancée
+  $("teamOptions")?.classList.toggle("hidden", !(teamMode && isAdvancedOptionsView()));
 
   const pc = Number($("playersCount")?.value || 1);
   const names = readPlayerNames();
@@ -931,7 +972,9 @@ document.addEventListener("DOMContentLoaded", () => {
   const playersCount = Number(prefs.playersCount || $("playersCount")?.value || 4);
   const durationSec  = Number(prefs.durationSec  || $("durationSec")?.value  || 60);
   const answerMode   = prefs.answerMode  || $("answerMode")?.value  || "mcq";
-  const exerciseType = prefs.exerciseType || $("exerciseType")?.value || "add";
+  let exerciseType = prefs.exerciseType || $("exerciseType")?.value || "add";
+  // Division pas encore dispo -> on retombe sur addition
+  if (exerciseType === "div") exerciseType = "add";
   const playerNames  = prefs.playerNames || ["", "", "", ""];
   const screenProfile = prefs.screenProfile || $("screenProfile")?.value || "tni";
 
@@ -971,16 +1014,26 @@ document.addEventListener("DOMContentLoaded", () => {
   renderPlayerInputs(playersCount, playerNames, { teamMode, teamCount, teams: playerTeams });
 
   // UI sync
+  // Vue options: si on a déjà activé une option avancée, on ouvre directement l'onglet avancé
+  let advancedOnly = !!expertMode || !!autoDifficulty || !!teamMode;
+  setAdvancedOptionsView(advancedOnly);
+
   syncGameModeUI();
   syncExpertUI();
   $("gameMode")?.addEventListener("change", syncGameModeUI);
+
+  $("btnAdvancedOnly")?.addEventListener("click", () => {
+    advancedOnly = !advancedOnly;
+    setAdvancedOptionsView(advancedOnly);
+    syncExpertUI();
+    syncTeamUI();
+  });
 
   $("expertMode")?.addEventListener("change", () => {
     syncExpertUI();
   });
 
   $("teamMode")?.addEventListener("change", () => {
-    $("teamOptions")?.classList.toggle("hidden", !$("teamMode")?.checked);
     syncTeamUI();
   });
   $("teamCount")?.addEventListener("change", () => {
@@ -1054,6 +1107,11 @@ document.addEventListener("DOMContentLoaded", () => {
     const dur = Number($("durationSec")?.value || 60);
     const ansMode = $("answerMode")?.value || "mcq";
     const exType = $("exerciseType")?.value || "add";
+
+    if (exType === "div"){
+      alert("➗ La division arrive bientôt 😊");
+      return;
+    }
     const names = readPlayerNames();
     const profile = $("screenProfile")?.value || "tni";
 
@@ -1091,7 +1149,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     // HUD
-    const modeLabel = ansMode === "mcq" ? "🎈 QCM" : "⌨️ Clavier";
+    const modeLabel = ansMode === "mcq" ? "🎈 QCM" : "☁️ Clavier";
     const gmLabel = gm === "time" ? "⏱ Temps" : `🏁 Premier à ${target}`;
     const extra = `${expert ? " • 🏆 Expert" : (showExp ? " • 📘" : " • 🚫")}${tm ? " • 🤝" : ""}`;
 

@@ -726,14 +726,32 @@ body{
   gap: 12px;
 }
 
-.field-mode .subfield{
-  margin-top: 10px;
+/* Sous-champ (durée / premier à) */
+.subfield{
+  margin-top: 2px;
 }
-.field-mode .sub-label{
+.sub-label{
   font-size: 13px;
   font-weight: 900;
   color: var(--muted);
   margin-bottom: 6px;
+}
+
+/* En-tête options (rapides vs avancées) */
+.options-head{
+  display:flex;
+  align-items:flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 12px;
+}
+.options-head-left{ display:flex; flex-direction:column; gap: 2px; }
+.options-title{ font-weight: 1000; }
+.options-desc{ color: var(--muted); font-weight: 800; font-size: 12px; }
+
+/* Opt-grid sur 1 colonne (options rapides) */
+.opt-grid-1{
+  grid-template-columns: 1fr;
 }
 
 /* --- Options: tuiles (moins "fouilli") --- */

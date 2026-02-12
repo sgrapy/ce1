@@ -1,5 +1,6 @@
 // js/engine/engine.js
 import { makeQuestion as makeAddQuestion } from "./questions/addition.js";
+import { makeQuestion as makeSubQuestion } from "./questions/subtraction.js";
 import { generateQuestion as makeMulQuestion, generateChoices as makeMulChoices } from "./questions/multiplication.js";
 
 // Sécurité: clamp
@@ -35,19 +36,26 @@ function buildQuestion(exerciseType, settings){
     return { kind: "multiplication", ...qBase, choices };
   }
 
-  // default: add
+  // ADD / SUB
   const safe = {
     ...settings,
-    type: "add",
+    type,
     aMin: clampInt(settings?.aMin, 0, 999, 0),
-    aMax: clampInt(settings?.aMax, 0, 999, 69),
+    aMax: clampInt(settings?.aMax, 0, 999, type === "add" ? 10 : 69),
     bMin: clampInt(settings?.bMin, 0, 999, 0),
-    bMax: clampInt(settings?.bMax, 0, 999, 69),
+    bMax: clampInt(settings?.bMax, 0, 999, type === "add" ? 10 : 69),
+    // réutilisé pour sub = "sans emprunt"
     noCarryUnits: !!settings?.noCarryUnits,
     choices: clampInt(settings?.choices, 3, 5, 3),
   };
 
-  const q = makeAddQuestion(safe); // déjà {a,b,answer,choices}
+  if (type === "sub"){
+    const q = makeSubQuestion(safe);
+    return q;
+  }
+
+  // default: add
+  const q = makeAddQuestion(safe);
   return { ...q, text: `${q.a} + ${q.b}` };
 }
 
