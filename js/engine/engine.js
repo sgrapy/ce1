@@ -3,6 +3,7 @@ import { makeQuestion as makeAddQuestion } from "./questions/addition.js";
 import { makeQuestion as makeSubQuestion } from "./questions/subtraction.js";
 import { makeQuestion as makeDivQuestion } from "./questions/division.js";
 import { generateQuestion as makeMulQuestion, generateChoices as makeMulChoices } from "./questions/multiplication.js";
+import { makeQuestion as makeEngQuestion } from "./questions/english.js";
 
 // Sécurité: clamp
 function clampInt(n, min, max, fallback){
@@ -22,6 +23,17 @@ function normalizeTables(tables){
 function buildQuestion(exerciseType, settings){
   // fallback si jamais settings.type est utilisé
   const type = exerciseType || settings?.type || "add";
+
+  // ENGLISH
+  if (type === "eng"){
+    const safe = {
+      ...settings,
+      type: "eng",
+      enMode: settings?.enMode || "color",
+      choices: clampInt(settings?.choices, 3, 5, 3),
+    };
+    return makeEngQuestion(safe);
+  }
 
   if (type === "mul"){
     const safe = {
@@ -87,6 +99,12 @@ export function createEngine({ exerciseType, settings, playersCount }){
       current: null,
       locked: false,
     })),
+    // Pour l'anglais (mode son), option "même mot pour tous"
+    sync: {
+      enabled: !!( (exerciseType || settings?.type) === "eng" && settings?.enMode === "sound" && settings?.enSyncSound ),
+      sharedQuestion: null,
+      answeredCount: 0,
+    },
   };
 
   function nextQuestion(playerIndex){
@@ -95,7 +113,16 @@ export function createEngine({ exerciseType, settings, playersCount }){
 
     p.locked = false;
 
-    const q = buildQuestion(state.exerciseType, state.settings);
+    let q;
+    if (state.sync?.enabled){
+      if (!state.sync.sharedQuestion || state.sync.answeredCount >= n){
+        state.sync.sharedQuestion = buildQuestion(state.exerciseType, state.settings);
+        state.sync.answeredCount = 0;
+      }
+      q = state.sync.sharedQuestion;
+    } else {
+      q = buildQuestion(state.exerciseType, state.settings);
+    }
     p.current = q;
 
     return { type: "QUESTION", question: q };
@@ -115,6 +142,10 @@ export function createEngine({ exerciseType, settings, playersCount }){
       p.score += 1;
     } else {
       p.no += 1;
+    }
+
+    if (state.sync?.enabled && q === state.sync.sharedQuestion){
+      state.sync.answeredCount += 1;
     }
 
     return {

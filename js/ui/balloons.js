@@ -23,13 +23,30 @@ export function renderBalloons(playerIndex, question, onPick){
     b.style.left = `calc(${xs[idx]}% - 105px)`;
     b.style.setProperty("--float-duration", (5000 + Math.random()*3000).toFixed(0) + "ms");
 
-    const hue = BALLOON_HUES[playerIndex % BALLOON_HUES.length];
+    const isEnglish = question?.kind === "english";
+    const answerStyle = isEnglish ? (question?.answerStyle || "text") : "text";
+
+    // Couleur ballon:
+    // - normal: par joueur
+    // - anglais "couleur": par choix (hueDeg)
+    const hue = (isEnglish && answerStyle === "color" && Array.isArray(question?.choiceHues))
+      ? Number(question.choiceHues[idx] ?? 0)
+      : BALLOON_HUES[playerIndex % BALLOON_HUES.length];
+
+    // Label:
+    // - normal: afficher val
+    // - anglais "couleur": pas de texte (on choisit à la couleur)
+    const label = (isEnglish && answerStyle === "color") ? "" : String(val);
 
     b.innerHTML = `
       <img src="assets/ballon.png" draggable="false"
         style="filter:hue-rotate(${hue}deg) saturate(1.25) brightness(1.05);" />
-      <span class="num">${val}</span>
+      <span class="num" ${label ? "" : "aria-hidden=\"true\""}>${label}</span>
     `;
+
+    if (isEnglish && answerStyle === "color"){
+      b.classList.add("balloon-color-only");
+    }
 
     b.addEventListener("click", (e) => {
   e.preventDefault();

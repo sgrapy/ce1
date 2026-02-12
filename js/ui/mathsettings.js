@@ -54,44 +54,93 @@ export function renderMathSettings(type, values = {}){
   const title = $("mathTitle");
   if (!box || !title) return;
 
+  
   // ADD / SUB
-  if (type === "add" || type === "sub"){
-    const isAdd = type === "add";
-    const defaultMax = isAdd ? 10 : 69;
+if (type === "add" || type === "sub"){
+  const isAdd = type === "add";
+  const defaultMax = isAdd ? 10 : 69;
 
-    title.textContent = isAdd ? "Réglages (➕ Addition)" : "Réglages (➖ Soustraction)";
+  title.textContent = isAdd ? "Réglages (➕ Addition)" : "Réglages (➖ Soustraction)";
 
-    // Valeurs par défaut pour le mode "calcul mental simplifié" (addition)
-    const mentalMode = !!values.mentalMode;
-    const mentalPlaces = Array.isArray(values.mentalPlaces) ? values.mentalPlaces : ["units", "tens", "hundreds"];
+  // Valeurs par défaut pour le mode "calcul mental simplifié" (addition)
+  const mentalMode = !!values.mentalMode;
+  const mentalPlaces = Array.isArray(values.mentalPlaces)
+    ? values.mentalPlaces
+    : ["units", "tens", "hundreds"];
 
-    box.innerHTML = `
-      <div class="field"><label>aMin</label><input id="aMin" class="mini" type="number" min="0" max="999" value="${values.aMin ?? 0}"></div>
-      <div class="field"><label>aMax</label><input id="aMax" class="mini" type="number" min="0" max="999" value="${values.aMax ?? defaultMax}"></div>
-      <div class="field"><label>bMin</label><input id="bMin" class="mini" type="number" min="0" max="999" value="${values.bMin ?? 0}"></div>
-      <div class="field"><label>bMax</label><input id="bMax" class="mini" type="number" min="0" max="999" value="${values.bMax ?? defaultMax}"></div>
+  const noCarryLabel = isAdd ? "Sans retenue (unités)" : "Sans emprunt (unités)";
 
+  box.innerHTML = `
+    <!-- Ligne 1 : bornes des 2 nombres -->
+  <div class="range-tiles">
+    <!-- Tuile Nombre 1 -->
+    <div class="range-tile n1">
+      <div class="range-head">
+        <span class="range-dot"></span>
+        <span class="range-title">Nombre 1</span>
+      </div>
+
+      <div class="range-row">
+        <div class="field">
+          <label for="aMin">Min</label>
+          <input id="aMin" class="mini" type="number" min="0" max="999" value="${values.aMin ?? 0}">
+        </div>
+        <div class="field">
+          <label for="aMax">Max</label>
+          <input id="aMax" class="mini" type="number" min="0" max="999" value="${values.aMax ?? defaultMax}">
+        </div>
+      </div>
+    </div>
+
+    <!-- Tuile Nombre 2 -->
+    <div class="range-tile n2">
+      <div class="range-head">
+        <span class="range-dot"></span>
+        <span class="range-title">Nombre 2</span>
+      </div>
+
+      <div class="range-row">
+        <div class="field">
+          <label for="bMin">Min</label>
+          <input id="bMin" class="mini" type="number" min="0" max="999" value="${values.bMin ?? 0}">
+        </div>
+        <div class="field">
+          <label for="bMax">Max</label>
+          <input id="bMax" class="mini" type="number" min="0" max="999" value="${values.bMax ?? defaultMax}">
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+    <!-- Ligne 2 : options + temps + choix -->
+    <div class="add-options-row">
       <div class="field">
-        <label>${isAdd ? "Sans retenue (unités)" : "Sans emprunt (unités)"}</label>
+        <label for="noCarryUnits">${noCarryLabel}</label>
         <select id="noCarryUnits" class="mini">
           <option value="true" ${(values.noCarryUnits ?? true) ? "selected" : ""}>Oui</option>
           <option value="false" ${values.noCarryUnits === false ? "selected" : ""}>Non</option>
         </select>
       </div>
 
-      <div class="field"><label>Temps / question</label><input id="qTimeSec" class="mini" type="number" min="2" max="30" value="${values.qTimeSec ?? 6}"></div>
+      <div class="field">
+        <label for="qTimeSec">Temps / question</label>
+        <input id="qTimeSec" class="mini" type="number" min="2" max="30" value="${values.qTimeSec ?? 6}">
+      </div>
 
       <div class="field">
-        <label>Choix QCM</label>
+        <label for="choices">Choix QCM</label>
         <select id="choices" class="mini">
           <option value="3" ${(values.choices ?? 3) === 3 ? "selected":""}>3</option>
           <option value="4" ${(values.choices ?? 3) === 4 ? "selected":""}>4</option>
           <option value="5" ${(values.choices ?? 3) === 5 ? "selected":""}>5</option>
         </select>
       </div>
+    </div>
 
-      ${isAdd ? `
-      <div class="field" style="grid-column: 1 / -1;">
+    <!-- Option Addition : calcul mental simplifié -->
+    ${isAdd ? `
+      <div class="field" style="grid-column: 1 / -1; margin-top: 12px;">
         <label>🧠 Calcul mental (simplifié)</label>
 
         <label class="chipSwitch">
@@ -117,8 +166,34 @@ export function renderMathSettings(type, values = {}){
           <small>💡 Conseil : pour CE1, commence avec <b>unités + dizaines</b>, puis ajoute les centaines.</small>
         </div>
       </div>
-      ` : ""}
-    `;
+    ` : ""}
+  `;
+
+  // wiring (show/hide + au moins 1 place cochée)
+  if (isAdd){
+    const toggle = box.querySelector("#mentalMode");
+    const opts = box.querySelector("#mentalOptions");
+    const sync = () => {
+      if (!toggle || !opts) return;
+      opts.classList.toggle("hidden", !toggle.checked);
+    };
+    toggle?.addEventListener("change", sync);
+    sync();
+
+    // sécurité: si aucune place cochée → on remet "tens"
+    const ensureOne = () => {
+      const checks = Array.from(box.querySelectorAll(".placeCheck"));
+      if (!checks.length) return;
+      const any = checks.some(c => c.checked);
+      if (!any){
+        const tens = checks.find(c => c.value === "tens");
+        if (tens) tens.checked = true;
+      }
+    };
+    box.querySelectorAll(".placeCheck").forEach(c => c.addEventListener("change", ensureOne));
+    ensureOne();
+  }
+
 
     // wiring (show/hide + au moins 1 place cochée)
     if (isAdd){
@@ -237,6 +312,59 @@ export function renderMathSettings(type, values = {}){
     box.querySelectorAll(".divCheck").forEach(c => c.addEventListener("change", ensureOne));
     ensureOne();
 
+    return;
+  }
+
+  // ENGLISH (Colors)
+  if (type === "eng"){
+    title.textContent = "Réglages (🇬🇧 Anglais • Couleurs)";
+
+    const mode = values.enMode || "color"; // color | sound
+    const enSyncSound = values.enSyncSound ?? true;
+    const enAnswerStyle = values.enAnswerStyle || "text"; // text | color
+
+    box.innerHTML = `
+      <div class="field" style="grid-column: 1 / -1;">
+        <label>Mode</label>
+        <select id="enMode" class="mini">
+          <option value="color" ${mode === "color" ? "selected" : ""}>🎨 Mode couleur (voir la couleur → choisir le mot)</option>
+          <option value="sound" ${mode === "sound" ? "selected" : ""}>🔊 Mode son (écouter → choisir le mot)</option>
+        </select>
+        <small>💡 En « son », l’app lit un mot en anglais. L’élève choisit le bon mot écrit.</small>
+      </div>
+
+      <div class="field" id="enSoundOptions" style="grid-column: 1 / -1; ${mode === "sound" ? "" : "display:none;"}">
+        <label>Options (mode son)</label>
+        <div class="mini-row">
+          <label class="mini-check">
+            <input type="checkbox" id="enSyncSound" ${enSyncSound ? "checked" : ""}>
+            Même mot pour tous (évite plusieurs sons)
+          </label>
+        </div>
+        <div class="mini-row" style="margin-top:6px;">
+          <label>Réponses sur les ballons</label>
+          <select id="enAnswerStyle" class="mini">
+            <option value="text" ${enAnswerStyle === "text" ? "selected" : ""}>📝 Texte (ballons colorés par joueur)</option>
+            <option value="color" ${enAnswerStyle === "color" ? "selected" : ""}>🎨 Couleurs (ballons colorés par couleur)</option>
+          </select>
+          <small>💡 En « couleurs », chaque ballon a une couleur différente (hue-rotate).</small>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Temps / question</label>
+        <input id="qTimeSec" class="mini" type="number" min="2" max="30" value="${values.qTimeSec ?? 6}">
+      </div>
+
+      <div class="field">
+        <label>Choix QCM</label>
+        <select id="choices" class="mini">
+          <option value="3" ${(values.choices ?? 3) === 3 ? "selected":""}>3</option>
+          <option value="4" ${(values.choices ?? 3) === 4 ? "selected":""}>4</option>
+          <option value="5" ${(values.choices ?? 3) === 5 ? "selected":""}>5</option>
+        </select>
+      </div>
+    `;
     return;
   }
 

@@ -19,10 +19,10 @@ export function showGame(){
 }
 
 export function showEnglish(){
-  $("screenMenu")?.classList.add("hidden");
+  // Anglais CE1 utilise le même menu & écran de jeu que Maths.
+  // On ne montre pas l'ancien écran "flashcards".
+  $("screenMenu")?.classList.remove("hidden");
   $("screenGame")?.classList.add("hidden");
-  $("screenEnglish")?.classList.remove("hidden");
-
-  // En anglais: on est en menu (pas de bouton fin)
+  $("screenEnglish")?.classList.add("hidden");
   $("btnEndHeader")?.classList.add("hidden");
 }

@@ -18,6 +18,68 @@ import { makeSkillLabel as makeAddLabel } from "./engine/questions/addition.js";
 import { makeSkillLabel as makeSubLabel } from "./engine/questions/subtraction.js";
 import { makeSkillLabel as makeMulLabel } from "./engine/questions/multiplication.js";
 import { makeSkillLabel as makeDivLabel } from "./engine/questions/division.js";
+import { makeSkillLabel as makeEngLabel } from "./engine/questions/english.js";
+
+
+
+function openProfModal(){
+  const m = $("profModal");
+  if (!m) return;
+  m.classList.remove("hidden");
+  m.setAttribute("aria-hidden", "false");
+}
+function closeProfModal(){
+  const m = $("profModal");
+  if (!m) return;
+  m.classList.add("hidden");
+  m.setAttribute("aria-hidden", "true");
+  const content = $("profContent");
+  if (content) content.innerHTML = "";
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  // ✅ Ouvre la modal prof depuis le header
+  $("btnProf")?.addEventListener("click", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    openProfModal();
+  });
+
+  // ✅ Fermer
+  $("btnCloseProf")?.addEventListener("click", closeProfModal);
+  $("profBackdrop")?.addEventListener("click", closeProfModal);
+
+  // ✅ ESC ferme
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") closeProfModal();
+  });
+
+  // ✅ Boutons
+  $("btnOpenStats")?.addEventListener("click", () => {
+    // Si tu as déjà une modal stats existante :
+    if (typeof openStatsModal === "function") return openStatsModal();
+
+    // Sinon : fallback simple (tu peux remplacer)
+    const box = $("profContent");
+    if (box) box.innerHTML = `<div class="card">📊 (Ici tu affiches tes stats/records)</div>`;
+  });
+
+  $("btnResetStats")?.addEventListener("click", () => {
+    const ok = confirm("⚠️ Réinitialiser toutes les stats et records ?");
+    if (!ok) return;
+
+    if (typeof resetAllStats === "function") resetAllStats();
+    else {
+      // fallback si tu n'as pas de helper
+      localStorage.removeItem("ce1_stats");
+      localStorage.removeItem("ce1_records");
+    }
+
+    const box = $("profContent");
+    if (box) box.innerHTML = `<div class="card">✅ Stats réinitialisées.</div>`;
+  });
+});
+
 
 // ------------------------------------------------------------
 // Layout
@@ -42,6 +104,36 @@ function openModal(id){
 function closeModal(id){
   $(id)?.classList.add("hidden");
 }
+// ------------------------------------------------------------
+// Mode prof modal wiring (header)
+// ------------------------------------------------------------
+$("btnProf")?.addEventListener("click", (e) => {
+  e.preventDefault();
+  e.stopPropagation();
+  openProfModal();
+});
+
+$("btnCloseProf")?.addEventListener("click", closeProfModal);
+$("profBackdrop")?.addEventListener("click", closeProfModal);
+
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") closeProfModal();
+});
+
+// Ouvrir Stats depuis la modal prof (réutilise la modal stats existante)
+$("btnOpenStatsProf")?.addEventListener("click", () => {
+  closeProfModal();
+  renderStatsModal();
+  openModal("statsModal");
+});
+
+// Reset stats depuis la modal prof
+$("btnResetStatsProf")?.addEventListener("click", () => {
+  if (!confirm("Reset des statistiques et records ?")) return;
+  resetStatsStore();
+  renderStatsModal();
+  alert("✅ Stats effacées.");
+});
 
 function wireModalBackdrops(){
   document.querySelectorAll(".modal-backdrop[data-close='1']").forEach(backdrop => {
@@ -99,6 +191,27 @@ function startHudClock(){
 // Timers par joueur (ballons)
 // ------------------------------------------------------------
 let qTimers = [];
+
+// ------------------------------------------------------------
+// Anglais (mode son) : round synchronisé (même mot pour tous)
+// ------------------------------------------------------------
+let EN_SYNC = {
+  active: false,
+  ready: [],
+  roundTimerId: null,
+};
+
+function isEnglishSoundSync(){
+  const s = ENGINE?.state?.settings || SESSION?.settingsSnapshot || {};
+  return SESSION?.exerciseType === "eng"
+    && s.enMode === "sound"
+    && !!s.enSyncSound;
+}
+
+function stopEnglishRoundTimer(){
+  if (EN_SYNC.roundTimerId) clearTimeout(EN_SYNC.roundTimerId);
+  EN_SYNC.roundTimerId = null;
+}
 
 function stopQuestionTimer(playerIndex){
   if (qTimers[playerIndex]) clearTimeout(qTimers[playerIndex]);
@@ -160,14 +273,18 @@ function showExplain(playerIndex, question, res){
   const isExpert = !!SESSION?.expertMode;
   const showExplainOption = !!SESSION?.showExplain;
 
-  const op = (question?.kind === "multiplication")
-    ? "×"
-    : (question?.kind === "division")
-      ? "÷"
-      : (question?.kind === "subtraction")
-        ? "−"
-        : "+";
-  const resultText = `${question.a} ${op} ${question.b} = ${question.answer}`;
+  const resultText = (question?.kind === "english")
+    ? `✅ Réponse : <b>${question.answer}</b>`
+    : (() => {
+        const op = (question?.kind === "multiplication")
+          ? "×"
+          : (question?.kind === "division")
+            ? "÷"
+            : (question?.kind === "subtraction")
+              ? "−"
+              : "+";
+        return `${question.a} ${op} ${question.b} = ${question.answer}`;
+      })();
 
   // ✅ BONNE RÉPONSE → badge + étoiles + résultat
   if (isCorrect){
@@ -197,6 +314,18 @@ function showExplain(playerIndex, question, res){
   }
 
   // ❌ MAUVAISE RÉPONSE avec explication CE1
+  if (question?.kind === "english"){
+    box.innerHTML = `
+      <div class="explain-title">🇬🇧 Couleurs</div>
+      <div class="ce1-text">
+        <p>La bonne réponse était : <b>${res?.correctAnswer ?? question?.answer ?? "—"}</b></p>
+        <p>Tu peux cliquer sur 🔊 dans la question pour réécouter.</p>
+      </div>
+      <div class="tap-to-continue">🖱️ Clique pour continuer</div>
+    `;
+    return;
+  }
+
   if (question?.kind === "addition"){
     renderAdditionBase10Explanation(question, box);
     box.insertAdjacentHTML("beforeend", `<div class="tap-to-continue">🖱️ Clique pour continuer</div>`);
@@ -349,6 +478,18 @@ function readExerciseSettings(exerciseType, durationSec){
     };
   }
 
+  if (exerciseType === "eng"){
+    return {
+      type: "eng",
+      enMode: $("enMode")?.value || "color",
+      enSyncSound: $("enSyncSound")?.checked ?? true,
+      enAnswerStyle: $("enAnswerStyle")?.value || "text",
+      choices,
+      qTimeSec,
+      durationSec
+    };
+  }
+
   return {
     type: "add",
     aMin: 0, aMax: 10,
@@ -363,13 +504,15 @@ function readExerciseSettings(exerciseType, durationSec){
 }
 
 function makeHudSkill(exerciseType, settings, difficultyLevel = 0){
-  const base = (exerciseType === "mul")
-    ? makeMulLabel(settings)
-    : (exerciseType === "div")
-      ? makeDivLabel(settings)
-      : (exerciseType === "sub")
-        ? makeSubLabel(settings)
-        : makeAddLabel(settings);
+  const base = (exerciseType === "eng")
+    ? makeEngLabel(settings)
+    : (exerciseType === "mul")
+      ? makeMulLabel(settings)
+      : (exerciseType === "div")
+        ? makeDivLabel(settings)
+        : (exerciseType === "sub")
+          ? makeSubLabel(settings)
+          : makeAddLabel(settings);
   return difficultyLevel > 0 ? `${base} • 🎮 niveau ${difficultyLevel}` : base;
 }
 
@@ -833,6 +976,15 @@ function checkRaceWin(playerIndex){
 function startPlayer(playerIndex){
   if (!GAME_RUNNING) return;
 
+  // 🇬🇧 Anglais (mode son) : tout le monde a le même mot en même temps
+  if (isEnglishSoundSync()){
+    // On lance un round partagé une seule fois (depuis le 1er appel)
+    if (!EN_SYNC.active){
+      startEnglishSoundRound();
+    }
+    return;
+  }
+
   stopQuestionTimer(playerIndex);
 
   const ev = ENGINE.nextQuestion(playerIndex);
@@ -844,7 +996,33 @@ function startPlayer(playerIndex){
   }
 
   const qEl = $("q-" + playerIndex);
-  if (qEl) qEl.textContent = q.text ?? `${q.a} + ${q.b}`;
+  if (qEl){
+    if (q.html) qEl.innerHTML = q.html;
+    else qEl.textContent = q.text ?? `${q.a} + ${q.b}`;
+
+    // Anglais (mode son) : lecture automatique + bouton 🔊
+    if (q.kind === "english" && q.say){
+      const speak = () => {
+        try{
+          const u = new SpeechSynthesisUtterance(String(q.say));
+          u.lang = "en-US";
+          speechSynthesis.cancel();
+          speechSynthesis.speak(u);
+        }catch(e){}
+      };
+
+      // bouton réécouter
+      const btn = qEl.querySelector?.(".en-sound");
+      btn?.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        speak();
+      });
+
+      // auto play
+      setTimeout(speak, 120);
+    }
+  }
 
   hideExplain(playerIndex);
 
@@ -980,6 +1158,190 @@ function startPlayer(playerIndex){
 }
 
 // ------------------------------------------------------------
+// 🇬🇧 Round synchronisé (mode son)
+// ------------------------------------------------------------
+function speakEnglishWord(word){
+  try{
+    const u = new SpeechSynthesisUtterance(String(word));
+    u.lang = "en-US";
+    speechSynthesis.cancel();
+    speechSynthesis.speak(u);
+  }catch(e){}
+}
+
+function startEnglishSoundRound(){
+  if (!GAME_RUNNING) return;
+
+  EN_SYNC.active = true;
+  EN_SYNC.ready = Array.from({ length: (SESSION?.playersCount || 1) }, () => false);
+
+  // Stop timers existants
+  stopAllQuestionTimers();
+  stopEnglishRoundTimer();
+
+  // Générer la question partagée (engine sync renvoie la même)
+  for (let i = 0; i < (SESSION?.playersCount || 1); i++){
+    ENGINE.nextQuestion(i);
+  }
+
+  const q = ENGINE?.state?.players?.[0]?.current;
+  if (!q) return;
+
+  // Lecture UNIQUE du son (évite plusieurs voix en même temps)
+  setTimeout(() => speakEnglishWord(q.say || q.answer), 120);
+
+  // Rendu pour chaque joueur
+  for (let playerIndex = 0; playerIndex < (SESSION?.playersCount || 1); playerIndex++){
+    stopQuestionTimer(playerIndex);
+
+    // start time stats
+    if (SESSION?.perPlayer?.[playerIndex]){
+      SESSION.perPlayer[playerIndex].qStartMs = performance.now();
+    }
+
+    const qEl = $("q-" + playerIndex);
+    if (qEl){
+      if (q.html) qEl.innerHTML = q.html;
+      else qEl.textContent = q.text || "🔊 Écoute";
+
+      // Bouton réécouter (présent dans chaque carte, mais le son n'est joué que si l'élève clique)
+      const btn = qEl.querySelector?.(".en-sound");
+      btn?.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        speakEnglishWord(q.say || q.answer);
+      });
+    }
+
+    hideExplain(playerIndex);
+
+    const answerMode = SESSION?.answerMode || "mcq";
+    const stage = $("stage-" + playerIndex);
+    if (stage){
+      stage.classList.remove("locked", "stage-fade");
+      if (answerMode === "keypad") stage.classList.add("hidden");
+      else stage.classList.remove("hidden");
+    }
+    setKeypadVisible(playerIndex, answerMode === "keypad");
+    setKeypadLocked(playerIndex, false);
+
+    const handlePick = (picked, clickedEl) => {
+      if (!GAME_RUNNING) return;
+
+      // Empêcher que quelqu'un avance seul
+      const stage = $("stage-" + playerIndex);
+      if (stage) stage.classList.add("locked");
+      setKeypadLocked(playerIndex, true);
+
+      // response time
+      const t0 = SESSION?.perPlayer?.[playerIndex]?.qStartMs || performance.now();
+      const dt = Math.max(0, performance.now() - t0);
+      SESSION?.perPlayer?.[playerIndex]?.timesMs?.push(dt);
+
+      const res = ENGINE.answer(playerIndex, picked);
+      if (!res || res.type !== "ANSWERED") return;
+
+      // streaks + totals (même logique que mode normal)
+      if (SESSION?.perPlayer?.[playerIndex]){
+        if (res.correct){
+          SESSION.perPlayer[playerIndex].streak += 1;
+          SESSION.perPlayer[playerIndex].bestStreak = Math.max(
+            SESSION.perPlayer[playerIndex].bestStreak,
+            SESSION.perPlayer[playerIndex].streak
+          );
+          SESSION.totals.ok += 1;
+        } else {
+          SESSION.perPlayer[playerIndex].streak = 0;
+          SESSION.totals.no += 1;
+        }
+      }
+
+      // stats UI
+      const sEl = $("score-" + playerIndex);
+      const okEl = $("ok-" + playerIndex);
+      const noEl = $("no-" + playerIndex);
+      if (sEl) sEl.textContent = String(res.stats.score);
+      if (okEl) okEl.textContent = String(res.stats.ok);
+      if (noEl) noEl.textContent = String(res.stats.no);
+
+      // FX ballons
+      if (stage){
+        let correctEl = null;
+        if (!res.correct){
+          correctEl = stage.querySelector(`.balloon[data-value="${res.correctAnswer}"]`);
+        }
+        explodeOne(stage, clickedEl, { good: !!res.correct });
+        explodeAllExcept(stage, res.correct ? [] : [correctEl]);
+        if (correctEl){
+          freezeAtCurrentPosition(stage, correctEl);
+          correctEl.classList.add("correct-answer");
+          requestAnimationFrame(() => correctEl.classList.add("centered-correct"));
+        }
+      }
+
+      showExplain(playerIndex, q, res);
+
+      waitTapToContinue(playerIndex, () => {
+        EN_SYNC.ready[playerIndex] = true;
+        // Quand tout le monde a fini → round suivant pour tous
+        if (EN_SYNC.ready.every(Boolean)){
+          EN_SYNC.active = false;
+          startEnglishSoundRound();
+        }
+      });
+    };
+
+    if (answerMode === "keypad"){
+      wireKeypadAnswer(playerIndex, q, handlePick);
+    } else {
+      renderBalloons(playerIndex, q, handlePick);
+    }
+  }
+
+  // ⏱ Timer unique pour le round
+  const s = ENGINE?.state?.settings || SESSION?.settingsSnapshot || {};
+  const timeSec = Number(s?.qTimeSec || 0);
+
+  if (timeSec > 0){
+    EN_SYNC.roundTimerId = setTimeout(() => {
+      if (!GAME_RUNNING) return;
+      onEnglishSoundRoundTimeout();
+    }, timeSec * 1000);
+  }
+}
+
+function onEnglishSoundRoundTimeout(){
+  stopEnglishRoundTimer();
+
+  const n = SESSION?.playersCount || 1;
+  for (let playerIndex = 0; playerIndex < n; playerIndex++){
+    const stage = $("stage-" + playerIndex);
+    if (stage){
+      stage.classList.add("locked");
+      explodeAllExcept(stage, []);
+    }
+
+    const box = $("explain-" + playerIndex);
+    if (box){
+      box.classList.remove("hidden");
+      box.innerHTML = `
+        <div class="explain-title">⏱ Temps écoulé</div>
+        <div class="ce1-text"><p>On passe à la question suivante.</p></div>
+        <div class="tap-to-continue">🖱️ Clique pour continuer</div>
+      `;
+    }
+
+    waitTapToContinue(playerIndex, () => {
+      EN_SYNC.ready[playerIndex] = true;
+      if (EN_SYNC.ready.every(Boolean)){
+        EN_SYNC.active = false;
+        startEnglishSoundRound();
+      }
+    });
+  }
+}
+
+// ------------------------------------------------------------
 // UI syncing
 // ------------------------------------------------------------
 function syncGameModeUI(){
@@ -1043,6 +1405,14 @@ function syncExpertUI(){
   }
 }
 
+function syncEnglishSettingsUI(){
+  const enMode = $("enMode")?.value;
+  const box = $("enSoundOptions");
+  if (box){
+    box.style.display = (enMode === "sound") ? "block" : "none";
+  }
+}
+
 // ------------------------------------------------------------
 // Init
 // ------------------------------------------------------------
@@ -1062,8 +1432,26 @@ document.addEventListener("DOMContentLoaded", () => {
       btn.setAttribute("aria-selected", String(isActive));
     });
 
+    // Affichage écran (on utilise le même menu)
     if (app === "english") showEnglish();
     else showMenu();
+
+    // Mode appli : filtre les exercices + contraintes UI
+    const exSel = $("exerciseType");
+    const ansSel = $("answerMode");
+    if (app === "english"){
+      // force Anglais
+      if (exSel){ exSel.value = "eng"; exSel.disabled = true; }
+      // Anglais = QCM (pour l'instant)
+      if (ansSel){ ansSel.value = "mcq"; ansSel.disabled = true; }
+      renderMathSettings("eng", loadPrefs()?.exerciseSettings || {});
+      $("mathTitle")?.scrollIntoView?.({ block: "nearest" });
+    } else {
+      if (exSel){ exSel.disabled = false; }
+      if (ansSel){ ansSel.disabled = false; }
+      // re-rendu réglages selon exercice actuel
+      if (exSel) renderMathSettings(exSel.value, loadPrefs()?.exerciseSettings || {});
+    }
   }
 
   // clic onglets
@@ -1134,6 +1522,15 @@ document.addEventListener("DOMContentLoaded", () => {
   renderMathSettings(exerciseType, prefs.exerciseSettings || prefs.settings || {});
   $("exerciseType")?.addEventListener("change", () => {
     renderMathSettings($("exerciseType").value, {});
+    // après re-render, on peut re-sync l'UI anglais
+    syncEnglishSettingsUI();
+  });
+
+  // Anglais : afficher/masquer les options "mode son"
+  document.addEventListener("change", (e) => {
+    if (e.target && e.target.id === "enMode"){
+      syncEnglishSettingsUI();
+    }
   });
 
   // players inputs (avec équipes si besoin)
@@ -1145,6 +1542,7 @@ document.addEventListener("DOMContentLoaded", () => {
   setOptionsView(initialView);
 
   syncGameModeUI();
+  syncEnglishSettingsUI();
   syncExpertUI();
   syncTeamUI();
 
