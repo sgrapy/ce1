@@ -1,0 +1,273 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Math CE1 - TNI</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <!-- Background (semi-transparent via CSS) -->
+  <div class="bg"></div>
+
+  <header class="topbar">
+    <div class="brand">🎈 Math CE1</div>
+
+    <div class="topbar-actions">
+      <!-- Réglages appli (modal) -->
+      <button id="btnSettings" class="btn btn-ghost" title="Réglages">⚙️</button>
+
+      <!-- Plein écran -->
+      <button id="btnFullscreen" class="btn btn-ghost" title="Plein écran">⛶</button>
+
+      <!-- Fin de partie (visible seulement en jeu) -->
+      <button id="btnEndHeader" class="btn btn-ghost hidden" title="Fin">⏹</button>
+    </div>
+  </header>
+
+  <main class="app">
+
+    <!-- MENU -->
+    <section id="screenMenu" class="panel panel-wide">
+      <div class="menu-title">
+        <h1>🎒 Préparer la séance</h1>
+        <div class="menu-sub">Choisis l’exercice, les joueurs et les réglages.</div>
+      </div>
+
+      <div class="menu-layout">
+        <!-- Colonne gauche -->
+        <div class="menu-col">
+
+          <div class="card">
+            <h2>🧩 Séance</h2>
+
+            <!-- Réglages principaux (plus lisibles) -->
+            <div class="row2eq">
+              <div class="field">
+                <label>Exercice</label>
+                <select id="exerciseType">
+                  <option value="add">Addition</option>
+                  <option value="sub">Soustraction</option>
+                  <option value="mul">Multiplication</option>
+                  <option value="div">Division</option>
+                </select>
+              </div>
+
+              <div class="field">
+                <label>Réponses</label>
+                <select id="answerMode">
+                  <option value="mcq">QCM (ballons)</option>
+                  <option value="keypad">Clavier</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Mode de jeu + paramètre juste en dessous -->
+            <div class="row1">
+              <div class="field field-mode">
+                <label>Mode de jeu</label>
+                <select id="gameMode">
+                  <option value="time">⏱ Temps</option>
+                  <option value="race">🏁 Premier à X</option>
+                </select>
+
+                <div class="subfield" id="timeWrap">
+                  <label class="sub-label">Durée (sec)</label>
+                  <input id="durationSec" type="number" min="10" max="3600" step="5" value="60" />
+                </div>
+
+                <div class="subfield hidden" id="raceTargetWrap">
+                  <label class="sub-label">Premier à (points)</label>
+                  <input id="raceTarget" type="number" min="1" max="200" step="1" value="10" />
+                </div>
+              </div>
+            </div>
+
+            <!-- Options (moins "fouilli") -->
+            <div class="opt-grid">
+              <label class="opt-tile" id="tileExplain">
+                <div class="opt-text">
+                  <div class="opt-title">📘 Explications</div>
+                  <div class="opt-desc">Afficher une aide seulement en cas d’erreur</div>
+                </div>
+                <input id="showExplainOption" type="checkbox" checked />
+                <span class="opt-switch" aria-hidden="true"></span>
+              </label>
+
+              <label class="opt-tile" id="tileAuto">
+                <div class="opt-text">
+                  <div class="opt-title">🎮 Difficulté auto</div>
+                  <div class="opt-desc">La difficulté augmente pendant la partie</div>
+                </div>
+                <input id="autoDifficulty" type="checkbox" />
+                <span class="opt-switch" aria-hidden="true"></span>
+              </label>
+
+              <label class="opt-tile" id="tileExpert">
+                <div class="opt-text">
+                  <div class="opt-title">🏆 Mode Expert</div>
+                  <div class="opt-desc">Sans explications • records enregistrés</div>
+                </div>
+                <input id="expertMode" type="checkbox" />
+                <span class="opt-switch" aria-hidden="true"></span>
+              </label>
+
+              <label class="opt-tile" id="tileTeam">
+                <div class="opt-text">
+                  <div class="opt-title">🤝 Mode équipe</div>
+                  <div class="opt-desc">Additionne les scores par équipe</div>
+                </div>
+                <input id="teamMode" type="checkbox" />
+                <span class="opt-switch" aria-hidden="true"></span>
+              </label>
+            </div>
+
+            <div class="team-options hidden" id="teamOptions">
+              <div class="field">
+                <label>Nombre d'équipes</label>
+                <select id="teamCount">
+                  <option value="2" selected>2</option>
+                  <option value="3">3</option>
+                  <option value="4">4</option>
+                </select>
+              </div>
+              <div class="team-hint">
+                <small>Assigne chaque joueur à une équipe juste en dessous 👇</small>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <h2>👩‍👧‍👦 Joueurs</h2>
+
+            <div class="row2">
+              <div class="field">
+                <label>Nombre</label>
+                <select id="playersCount">
+                  <option value="1">1</option>
+                  <option value="2">2</option>
+                  <option value="3">3</option>
+                  <option value="4" selected>4</option>
+                </select>
+              </div>
+            </div>
+
+            <div id="playersInputs" class="players-inputs players-nice"></div>
+          </div>
+
+        </div>
+
+        <!-- Colonne droite -->
+        <div class="menu-col">
+          <div class="card">
+            <h2 id="mathTitle">⚙️ Réglages (Addition)</h2>
+            <div id="mathSettings" class="math-grid nice-grid"></div>
+          </div>
+
+          <div class="card">
+            <h2>👨‍🏫 Mode prof</h2>
+            <div class="row2">
+              <button id="btnOpenStats" class="btn">📊 Stats & Records</button>
+              <button id="btnResetStats" class="btn btn-ghost">🧹 Reset stats</button>
+            </div>
+            <small>Les stats/records sont enregistrés sur cet appareil (localStorage).</small>
+          </div>
+
+          <div class="card launch-card">
+            <button id="btnStart" class="btn btn-primary btn-launch">▶️ Lancer la partie</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- GAME -->
+    <section id="screenGame" class="game hidden">
+      <div class="hud">
+        <div id="hudMode" class="pill">Mode</div>
+        <div id="hudSkill" class="pill">Compétence</div>
+        <div id="hudTimer" class="pill">⏱ 60s</div>
+        <button id="btnEnd" class="btn btn-ghost">⏹ Fin</button>
+      </div>
+
+      <div id="gameGrid" class="game-grid"></div>
+    </section>
+
+  </main>
+
+  <!-- MODAL: Réglages application -->
+  <div id="appSettingsModal" class="modal hidden">
+    <div class="modal-backdrop" data-close="1"></div>
+
+    <div class="modal-card">
+      <div class="modal-head">
+        <h2>⚙️ Réglages application</h2>
+        <button class="btn btn-ghost" id="btnCloseSettings">✕</button>
+      </div>
+
+      <div class="settings-grid">
+        <div class="field">
+          <label>Type d’écran</label>
+          <select id="screenProfile">
+            <option value="tni">TNI / TBI</option>
+            <option value="laptop">Ordi / portable</option>
+            <option value="mobile">Mobile</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label>Version</label>
+          <div class="about-box" id="appVersion">v1.0.0</div>
+        </div>
+
+        <div class="field">
+          <label>Maintenance</label>
+          <button id="btnReset" class="btn">🧹 Vider réglages</button>
+          <small>Efface les réglages enregistrés (localStorage).</small>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Stats & Records -->
+  <div id="statsModal" class="modal hidden">
+    <div class="modal-backdrop" data-close="1"></div>
+    <div class="modal-card modal-wide">
+      <div class="modal-head">
+        <h2>📊 Statistiques & Records</h2>
+        <button class="btn btn-ghost" id="btnCloseStats">✕</button>
+      </div>
+
+      <div class="tabs">
+        <button class="tab active" data-tab="records">🏆 Records</button>
+        <button class="tab" data-tab="sessions">📅 Parties</button>
+      </div>
+
+      <div id="tabRecords" class="tab-panel"></div>
+      <div id="tabSessions" class="tab-panel hidden"></div>
+
+      <div class="modal-footer">
+        <button id="btnResetStats2" class="btn btn-ghost">🧹 Reset stats</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Résultats (podium) -->
+  <div id="resultsModal" class="modal hidden">
+    <div class="modal-backdrop" data-close="1"></div>
+    <div class="modal-card modal-wide">
+      <div class="modal-head">
+        <h2>🥇 Résultats</h2>
+        <button class="btn btn-ghost" id="btnCloseResults">✕</button>
+      </div>
+
+      <div id="resultsContent"></div>
+
+      <div class="modal-footer">
+        <button id="btnBackToMenu" class="btn btn-primary">↩️ Retour menu</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
