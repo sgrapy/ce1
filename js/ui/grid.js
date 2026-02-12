@@ -34,6 +34,7 @@ export function renderGrid({ layout, playersCount, names }) {
       <div class="answer-area" id="answer-${i}">
 
         <div class="balloon-stage" id="stage-${i}"></div>
+        <div class="keypad hidden" id="keypad-${i}"></div>
         <div class="explain hidden" id="explain-${i}"></div>
       </div>
     `;

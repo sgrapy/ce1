@@ -1,6 +1,7 @@
 // js/engine/engine.js
 import { makeQuestion as makeAddQuestion } from "./questions/addition.js";
 import { makeQuestion as makeSubQuestion } from "./questions/subtraction.js";
+import { makeQuestion as makeDivQuestion } from "./questions/division.js";
 import { generateQuestion as makeMulQuestion, generateChoices as makeMulChoices } from "./questions/multiplication.js";
 
 // Sécurité: clamp
@@ -34,6 +35,20 @@ function buildQuestion(exerciseType, settings){
     const choices = makeMulChoices(qBase.answer, safe.choices);
     // ✅ pour un rendu UI simple (showExplain, badges, etc.)
     return { kind: "multiplication", ...qBase, choices };
+  }
+
+  // DIV
+  if (type === "div"){
+    const safe = {
+      ...settings,
+      type: "div",
+      divisors: Array.isArray(settings?.divisors) ? settings.divisors : [2, 10],
+      qMax: clampInt(settings?.qMax, 10, 999, 99),
+      choices: clampInt(settings?.choices, 3, 5, 3),
+    };
+
+    const q = makeDivQuestion(safe);
+    return q;
   }
 
   // ADD / SUB

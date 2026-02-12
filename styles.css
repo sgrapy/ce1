@@ -19,6 +19,261 @@ body{
   background: #0f172a;
 }
 
+
+
+/* =========================
+   Header tabs (Math / Anglais / Français)
+========================= */
+.app-tabs{
+  display:flex;
+  gap: 8px;
+  align-items:center;
+  padding: 4px;
+  border-radius: 999px;
+  border: 1px solid rgba(2,6,23,0.12);
+  background: rgba(255,255,255,0.55);
+  box-shadow: 0 10px 24px rgba(2,6,23,0.08);
+}
+
+.app-tab{
+  border: 0;
+  background: transparent;
+  padding: 8px 12px;
+  border-radius: 999px;
+  font-weight: 1000;
+  cursor: pointer;
+  color: rgba(2,6,23,0.88);
+  transition: transform .12s ease, background .2s ease, box-shadow .2s ease;
+}
+
+.app-tab:hover{
+  transform: translateY(-1px);
+}
+
+.app-tab.active{
+  background: rgba(255,255,255,0.92);
+  box-shadow: 0 10px 18px rgba(2,6,23,0.12);
+}
+
+.app-tab-disabled{
+  opacity: .55;
+  cursor: not-allowed;
+}
+
+/* =========================
+   Segmented tabs (Options rapides / avancées)
+========================= */
+.seg-tabs{
+  display:inline-flex;
+  gap: 6px;
+  padding: 4px;
+  border-radius: 999px;
+  background: rgba(2,6,23,0.06);
+  border: 1px solid rgba(2,6,23,0.12);
+}
+
+.seg-tab{
+  border: 0;
+  background: transparent;
+  padding: 8px 10px;
+  border-radius: 999px;
+  font-weight: 1000;
+  cursor: pointer;
+  transition: background .2s ease, transform .12s ease;
+}
+
+.seg-tab:hover{ transform: translateY(-1px); }
+
+.seg-tab.active{
+  background: rgba(255,255,255,0.92);
+  box-shadow: 0 10px 18px rgba(2,6,23,0.12);
+}
+
+/* =========================
+   English colors (simple)
+========================= */
+.colors-grid{
+  display:grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.color-card{
+  border: 1px solid var(--border);
+  background: rgba(255,255,255,0.82);
+  border-radius: 18px;
+  padding: 12px;
+  cursor: pointer;
+  display:flex;
+  align-items:center;
+  gap: 12px;
+  box-shadow: 0 10px 22px rgba(2,6,23,0.08);
+  transition: transform .12s ease;
+}
+
+.color-card:active{ transform: scale(0.99); }
+
+.color-card .swatch{
+  width: 34px;
+  height: 34px;
+  border-radius: 12px;
+  background: var(--swatch);
+  box-shadow: inset 0 0 0 2px rgba(255,255,255,0.55);
+}
+
+.color-card .label{
+  font-weight: 1000;
+}
+
+.color-card.is-en .label{
+  letter-spacing: .3px;
+}
+
+/* =========================
+   Keypad (nuages)
+========================= */
+.keypad{
+  position: relative;
+  width: 100%;
+  min-height: 260px;
+  display:flex;
+  flex-direction: column;
+  justify-content:center;
+  align-items:center;
+  gap: 14px;
+}
+
+.keypad.locked{
+  pointer-events: none;
+  opacity: .98;
+}
+
+.keypad-top{
+  display:flex;
+  flex-direction: column;
+  align-items:center;
+  gap: 8px;
+}
+
+.keypad-hint{
+  font-size: 13px;
+  font-weight: 900;
+  color: rgba(2,6,23,0.72);
+}
+
+.keypad-display{
+  display:flex;
+  justify-content:center;
+}
+
+.keypad-display-cloud{
+  position: relative;
+  padding: 14px 18px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.92);
+  border: 1px solid rgba(2,6,23,0.12);
+  box-shadow: 0 14px 26px rgba(2,6,23,0.12);
+}
+
+.keypad-display-cloud::before,
+.keypad-display-cloud::after{
+  content:"";
+  position:absolute;
+  background: rgba(255,255,255,0.92);
+  border: 1px solid rgba(2,6,23,0.10);
+  border-radius: 999px;
+  width: 26px;
+  height: 26px;
+  top: 10px;
+}
+
+.keypad-display-cloud::before{ left: -10px; }
+.keypad-display-cloud::after{ right: -10px; }
+
+.keypad-display-cloud .slots{
+  display:flex;
+  gap: 10px;
+  align-items:center;
+  justify-content:center;
+}
+
+.keypad-display-cloud .slot{
+  width: 22px;
+  height: 28px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-weight: 1100;
+  font-size: 20px;
+  color: rgba(2,6,23,0.65);
+  border-bottom: 2px solid rgba(2,6,23,0.20);
+  padding-bottom: 2px;
+}
+
+.keypad-display-cloud .slot.filled{
+  color: rgba(2,6,23,0.92);
+  border-bottom-color: rgba(2,6,23,0.32);
+}
+
+.keypad-grid{
+  width: min(460px, 100%);
+  display:grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  padding: 0 8px;
+}
+
+.cloud-key{
+  position: relative;
+  border: 0;
+  background: transparent;
+  height: 64px;
+  cursor: pointer;
+  user-select:none;
+}
+
+.cloud-key .cloud-shape{
+  position:absolute;
+  inset: 0;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.92);
+  border: 1px solid rgba(2,6,23,0.14);
+  box-shadow: 0 12px 24px rgba(2,6,23,0.12);
+}
+
+.cloud-key .cloud-shape::before,
+.cloud-key .cloud-shape::after{
+  content:"";
+  position:absolute;
+  background: rgba(255,255,255,0.92);
+  border: 1px solid rgba(2,6,23,0.10);
+  border-radius: 999px;
+  width: 24px;
+  height: 24px;
+  top: 12px;
+}
+
+.cloud-key .cloud-shape::before{ left: 10px; }
+.cloud-key .cloud-shape::after{ right: 10px; }
+
+.cloud-key .cloud-label{
+  position: relative;
+  z-index: 1;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  height: 100%;
+  font-size: 22px;
+  font-weight: 1100;
+  color: rgba(2,6,23,0.88);
+}
+
+.cloud-key:active{ transform: scale(0.98); }
+
+.cloud-back .cloud-label{
+  font-size: 18px;
+}
+
 /* =========================
    Global background
 ========================= */
@@ -1373,4 +1628,27 @@ input, select, textarea {
   font-size: 12px;
   font-weight: 900;
   opacity: .85;
+}
+
+/* Petit switch propre dans les réglages (math) */
+.chipSwitch{
+  display:flex;
+  align-items:flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 16px;
+  border: 1px dashed rgba(2,6,23,0.18);
+  background: rgba(255,255,255,0.72);
+  font-weight: 850;
+  line-height: 1.2;
+}
+
+.chipSwitch input{
+  margin-top: 2px;
+  width: 18px;
+  height: 18px;
+}
+
+.keypad-spacer{
+  height: 64px;
 }

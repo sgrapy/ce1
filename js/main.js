@@ -1,11 +1,12 @@
 // js/main.js
 import { $ } from "./ui/dom.js";
 import { getBalloonCenter, addConfetti, addPoof } from "./ui/fx.js";
-import { renderMathSettings, readSelectedTables } from "./ui/mathsettings.js";
+import { renderMathSettings, readSelectedTables, readSelectedDivisors } from "./ui/mathsettings.js";
 
-import { showMenu, showGame } from "./ui/screens.js";
+import { showMenu, showGame, showEnglish } from "./ui/screens.js";
 import { renderGrid } from "./ui/grid.js";
 import { renderBalloons } from "./ui/balloons.js";
+import { renderKeypad, setKeypadVisible, setKeypadLocked } from "./ui/keypad.js";
 import { renderPlayerInputs, readPlayerNames, readPlayerTeams } from "./ui/menu.js";
 import { renderAdditionBase10Explanation } from "./ui/additionBase10Explain.js";
 
@@ -16,6 +17,7 @@ import { createEngine } from "./engine/engine.js";
 import { makeSkillLabel as makeAddLabel } from "./engine/questions/addition.js";
 import { makeSkillLabel as makeSubLabel } from "./engine/questions/subtraction.js";
 import { makeSkillLabel as makeMulLabel } from "./engine/questions/multiplication.js";
+import { makeSkillLabel as makeDivLabel } from "./engine/questions/division.js";
 
 // ------------------------------------------------------------
 // Layout
@@ -160,9 +162,11 @@ function showExplain(playerIndex, question, res){
 
   const op = (question?.kind === "multiplication")
     ? "×"
-    : (question?.kind === "subtraction")
-      ? "−"
-      : "+";
+    : (question?.kind === "division")
+      ? "÷"
+      : (question?.kind === "subtraction")
+        ? "−"
+        : "+";
   const resultText = `${question.a} ${op} ${question.b} = ${question.answer}`;
 
   // ✅ BONNE RÉPONSE → badge + étoiles + résultat
@@ -241,11 +245,20 @@ function waitTapToContinue(playerIndex, onContinue){
 function onQuestionTimeout(playerIndex){
   if (!GAME_RUNNING) return;
 
+  const answerMode = SESSION?.answerMode || "mcq";
   const stage = $("stage-" + playerIndex);
-  if (!stage) return;
+  const pad = $("keypad-" + playerIndex);
 
-  stage.classList.add("locked");
-  explodeAllExcept(stage, []);
+  if (answerMode === "keypad"){
+    setKeypadLocked(playerIndex, true);
+    if (pad){
+      addPoof(pad, pad.clientWidth / 2, Math.min(90, pad.clientHeight / 2));
+    }
+  } else {
+    if (!stage) return;
+    stage.classList.add("locked");
+    explodeAllExcept(stage, []);
+  }
 
   const box = $("explain-" + playerIndex);
   if (box){
@@ -259,10 +272,22 @@ function onQuestionTimeout(playerIndex){
 
   waitTapToContinue(playerIndex, () => {
     if (!GAME_RUNNING) return;
-    stage.classList.remove("locked");
-    stage.classList.add("stage-fade");
+
+    if (answerMode === "keypad"){
+      setKeypadLocked(playerIndex, false);
+      const fadeEl = pad || $("answer-" + playerIndex);
+      fadeEl?.classList.add("stage-fade");
+      setTimeout(() => {
+        fadeEl?.classList.remove("stage-fade");
+        startPlayer(playerIndex);
+      }, 250);
+      return;
+    }
+
+    stage?.classList.remove("locked");
+    stage?.classList.add("stage-fade");
     setTimeout(() => {
-      stage.classList.remove("stage-fade");
+      stage?.classList.remove("stage-fade");
       startPlayer(playerIndex);
     }, 250);
   });
@@ -277,6 +302,15 @@ function readExerciseSettings(exerciseType, durationSec){
 
   if (exerciseType === "add" || exerciseType === "sub"){
     const defaultMax = exerciseType === "add" ? 10 : 69;
+
+    // Addition: option “calcul mental simplifié”
+    const mentalMode = exerciseType === "add" ? !!$("mentalMode")?.checked : false;
+    const mentalPlaces = exerciseType === "add"
+      ? Array.from(document.querySelectorAll(".placeCheck"))
+          .filter(c => c.checked)
+          .map(c => c.value)
+      : [];
+
     return {
       type: exerciseType,
       aMin: Number($("aMin")?.value ?? 0),
@@ -284,6 +318,10 @@ function readExerciseSettings(exerciseType, durationSec){
       bMin: Number($("bMin")?.value ?? 0),
       bMax: Number($("bMax")?.value ?? defaultMax),
       noCarryUnits: ($("noCarryUnits")?.value ?? "true") === "true",
+
+      mentalMode,
+      mentalPlaces,
+
       choices,
       qTimeSec,
       durationSec
@@ -300,11 +338,24 @@ function readExerciseSettings(exerciseType, durationSec){
     };
   }
 
+  if (exerciseType === "div"){
+    return {
+      type: "div",
+      divisors: readSelectedDivisors(),
+      qMax: Number($("qMax")?.value ?? 99),
+      choices,
+      qTimeSec,
+      durationSec
+    };
+  }
+
   return {
     type: "add",
     aMin: 0, aMax: 10,
     bMin: 0, bMax: 10,
     noCarryUnits: true,
+    mentalMode: false,
+    mentalPlaces: ["units", "tens"],
     choices: 3,
     qTimeSec: 6,
     durationSec
@@ -314,9 +365,11 @@ function readExerciseSettings(exerciseType, durationSec){
 function makeHudSkill(exerciseType, settings, difficultyLevel = 0){
   const base = (exerciseType === "mul")
     ? makeMulLabel(settings)
-    : (exerciseType === "sub")
-      ? makeSubLabel(settings)
-      : makeAddLabel(settings);
+    : (exerciseType === "div")
+      ? makeDivLabel(settings)
+      : (exerciseType === "sub")
+        ? makeSubLabel(settings)
+        : makeAddLabel(settings);
   return difficultyLevel > 0 ? `${base} • 🎮 niveau ${difficultyLevel}` : base;
 }
 
@@ -795,7 +848,19 @@ function startPlayer(playerIndex){
 
   hideExplain(playerIndex);
 
-  renderBalloons(playerIndex, q, (picked, clickedEl) => {
+  const answerMode = SESSION?.answerMode || "mcq";
+  const stage = $("stage-" + playerIndex);
+
+  // Mode UI : ballons vs clavier
+  if (stage){
+    stage.classList.remove("locked", "stage-fade");
+    if (answerMode === "keypad") stage.classList.add("hidden");
+    else stage.classList.remove("hidden");
+  }
+  setKeypadVisible(playerIndex, answerMode === "keypad");
+  setKeypadLocked(playerIndex, false);
+
+  const handlePick = (picked, clickedEl) => {
     if (!GAME_RUNNING) return;
 
     stopQuestionTimer(playerIndex);
@@ -826,11 +891,6 @@ function startPlayer(playerIndex){
     // difficulté progressive
     maybeIncreaseDifficulty();
 
-    const stage = $("stage-" + playerIndex);
-    if (!stage) return;
-
-    stage.classList.add("locked");
-
     // stats UI
     const sEl = $("score-" + playerIndex);
     const okEl = $("ok-" + playerIndex);
@@ -839,21 +899,38 @@ function startPlayer(playerIndex){
     if (okEl) okEl.textContent = String(res.stats.ok);
     if (noEl) noEl.textContent = String(res.stats.no);
 
-    // bon ballon si erreur
-    let correctEl = null;
-    if (!res.correct){
-      correctEl = stage.querySelector(`.balloon[data-value="${res.correctAnswer}"]`);
-    }
+    // FX + stop selon le mode
+    if (answerMode === "keypad"){
+      const pad = $("keypad-" + playerIndex);
+      setKeypadLocked(playerIndex, true);
 
-    explodeOne(stage, clickedEl, { good: !!res.correct });
-    explodeAllExcept(stage, res.correct ? [] : [correctEl]);
+      if (pad){
+        const x = pad.clientWidth / 2;
+        const y = Math.min(90, pad.clientHeight / 2);
+        if (res.correct) addConfetti(pad, x, y);
+        else addPoof(pad, x, y);
+      }
+    } else {
+      if (!stage) return;
 
-    if (correctEl){
-      freezeAtCurrentPosition(stage, correctEl);
-      correctEl.classList.add("correct-answer");
-      requestAnimationFrame(() => {
-        correctEl.classList.add("centered-correct");
-      });
+      stage.classList.add("locked");
+
+      // bon ballon si erreur
+      let correctEl = null;
+      if (!res.correct){
+        correctEl = stage.querySelector(`.balloon[data-value="${res.correctAnswer}"]`);
+      }
+
+      explodeOne(stage, clickedEl, { good: !!res.correct });
+      explodeAllExcept(stage, res.correct ? [] : [correctEl]);
+
+      if (correctEl){
+        freezeAtCurrentPosition(stage, correctEl);
+        correctEl.classList.add("correct-answer");
+        requestAnimationFrame(() => {
+          correctEl.classList.add("centered-correct");
+        });
+      }
     }
 
     // feedback
@@ -870,14 +947,27 @@ function startPlayer(playerIndex){
     // continuer
     waitTapToContinue(playerIndex, () => {
       if (!GAME_RUNNING) return;
-      stage.classList.remove("locked");
-      stage.classList.add("stage-fade");
+
+      if (answerMode === "keypad"){
+        setKeypadLocked(playerIndex, false);
+      } else {
+        stage?.classList.remove("locked");
+      }
+
+      const fadeEl = (answerMode === "keypad") ? $("keypad-" + playerIndex) : stage;
+      fadeEl?.classList.add("stage-fade");
       setTimeout(() => {
-        stage.classList.remove("stage-fade");
+        fadeEl?.classList.remove("stage-fade");
         startPlayer(playerIndex);
       }, 250);
     });
-  });
+  };
+
+  if (answerMode === "keypad"){
+    renderKeypad(playerIndex, q, (n) => handlePick(n, null));
+  } else {
+    renderBalloons(playerIndex, q, handlePick);
+  }
 
   // timer question
   const timeSec = Number(ENGINE.state?.settings?.qTimeSec || 0);
@@ -898,41 +988,36 @@ function syncGameModeUI(){
   $("raceTargetWrap")?.classList.toggle("hidden", mode !== "race");
 }
 
-function isAdvancedOptionsView(){
-  const adv = $("optionsAdvanced");
-  if (!adv) return false;
-  return !adv.classList.contains("hidden");
+function getOptionsView(){
+  const adv = $("tabAdvanced");
+  return adv?.classList.contains("active") ? "advanced" : "quick";
 }
 
-function setAdvancedOptionsView(advancedOnly){
+function setOptionsView(view){
   const quick = $("optionsQuick");
   const adv = $("optionsAdvanced");
-  const btn = $("btnAdvancedOnly");
-  const title = $("optionsTitle");
-  const desc = $("optionsDesc");
+  const tabQuick = $("tabQuick");
+  const tabAdv = $("tabAdvanced");
 
-  if (quick) quick.classList.toggle("hidden", !!advancedOnly);
-  if (adv) adv.classList.toggle("hidden", !advancedOnly);
+  const isAdv = view === "advanced";
 
-  if (title) title.textContent = advancedOnly ? "🧠 Options avancées" : "⚡ Options rapides";
-  if (desc) desc.textContent = advancedOnly
-    ? "Réglages pour aller plus loin (prof / experts)"
-    : "Réglages essentiels pour démarrer vite";
+  if (quick) quick.classList.toggle("hidden", isAdv);
+  if (adv) adv.classList.toggle("hidden", !isAdv);
 
-  if (btn) btn.textContent = advancedOnly
-    ? "⚡ Afficher les options rapides"
-    : "⚙️ Afficher seulement les options avancées";
+  tabQuick?.classList.toggle("active", !isAdv);
+  tabAdv?.classList.toggle("active", isAdv);
+  tabQuick?.setAttribute("aria-selected", String(!isAdv));
+  tabAdv?.setAttribute("aria-selected", String(isAdv));
 
-  // équipe: n'afficher le bloc "nombre d'équipes" que si on est en vue avancée
-  // et que le mode équipe est activé.
+  // Équipe: "nombre d'équipes" seulement si vue avancée + mode équipe activé
   const tm = $("teamMode")?.checked;
-  $("teamOptions")?.classList.toggle("hidden", !(advancedOnly && tm));
+  $("teamOptions")?.classList.toggle("hidden", !(isAdv && tm));
 }
 
 function syncTeamUI(){
   const teamMode = $("teamMode")?.checked;
   // "Nombre d'équipes" seulement dans la vue avancée
-  $("teamOptions")?.classList.toggle("hidden", !(teamMode && isAdvancedOptionsView()));
+  $("teamOptions")?.classList.toggle("hidden", !(teamMode && getOptionsView() === "advanced"));
 
   const pc = Number($("playersCount")?.value || 1);
   const names = readPlayerNames();
@@ -966,6 +1051,49 @@ document.addEventListener("DOMContentLoaded", () => {
   wireModalBackdrops();
   wireStatsTabs();
 
+  // ------------------------------------------------------------
+  // App tabs (Math / Anglais / Français)
+  // ------------------------------------------------------------
+  function setActiveApp(app){
+    // UI tabs
+    document.querySelectorAll("#appTabs .app-tab").forEach(btn => {
+      const isActive = btn.dataset.app === app;
+      btn.classList.toggle("active", isActive);
+      btn.setAttribute("aria-selected", String(isActive));
+    });
+
+    if (app === "english") showEnglish();
+    else showMenu();
+  }
+
+  // clic onglets
+  document.querySelectorAll("#appTabs .app-tab").forEach(btn => {
+    btn.addEventListener("click", () => {
+      if (btn.disabled) return;
+      if (GAME_RUNNING){
+        alert("⛔ Termine la partie avant de changer de module 😊");
+        return;
+      }
+      setActiveApp(btn.dataset.app);
+    });
+  });
+
+  // bouton retour (anglais)
+  $("btnBackToMath")?.addEventListener("click", () => setActiveApp("math"));
+
+  // couleurs : bascule FR ↔ EN
+  document.querySelectorAll(".color-card").forEach(card => {
+    card.addEventListener("click", (e) => {
+      e.preventDefault();
+      card.classList.toggle("is-en");
+      const label = card.querySelector(".label");
+      if (label){
+        label.textContent = card.classList.contains("is-en") ? (card.dataset.en || "") : (card.dataset.fr || "");
+      }
+    });
+  });
+
+
   const prefs = loadPrefs();
 
   // --- load prefs (defaults) ---
@@ -973,8 +1101,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const durationSec  = Number(prefs.durationSec  || $("durationSec")?.value  || 60);
   const answerMode   = prefs.answerMode  || $("answerMode")?.value  || "mcq";
   let exerciseType = prefs.exerciseType || $("exerciseType")?.value || "add";
-  // Division pas encore dispo -> on retombe sur addition
-  if (exerciseType === "div") exerciseType = "add";
   const playerNames  = prefs.playerNames || ["", "", "", ""];
   const screenProfile = prefs.screenProfile || $("screenProfile")?.value || "tni";
 
@@ -1013,24 +1139,32 @@ document.addEventListener("DOMContentLoaded", () => {
   // players inputs (avec équipes si besoin)
   renderPlayerInputs(playersCount, playerNames, { teamMode, teamCount, teams: playerTeams });
 
-  // UI sync
+    // UI sync
   // Vue options: si on a déjà activé une option avancée, on ouvre directement l'onglet avancé
-  let advancedOnly = !!expertMode || !!autoDifficulty || !!teamMode;
-  setAdvancedOptionsView(advancedOnly);
+  const initialView = (expertMode || autoDifficulty || teamMode) ? "advanced" : "quick";
+  setOptionsView(initialView);
 
   syncGameModeUI();
   syncExpertUI();
+  syncTeamUI();
+
   $("gameMode")?.addEventListener("change", syncGameModeUI);
 
-  $("btnAdvancedOnly")?.addEventListener("click", () => {
-    advancedOnly = !advancedOnly;
-    setAdvancedOptionsView(advancedOnly);
+  $("tabQuick")?.addEventListener("click", () => {
+    setOptionsView("quick");
     syncExpertUI();
     syncTeamUI();
   });
 
-  $("expertMode")?.addEventListener("change", () => {
+  $("tabAdvanced")?.addEventListener("click", () => {
+    setOptionsView("advanced");
     syncExpertUI();
+    syncTeamUI();
+  });
+
+$("expertMode")?.addEventListener("change", () => {
+    syncExpertUI();
+    if ($("expertMode")?.checked) setOptionsView("advanced");
   });
 
   $("teamMode")?.addEventListener("change", () => {
@@ -1108,10 +1242,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const ansMode = $("answerMode")?.value || "mcq";
     const exType = $("exerciseType")?.value || "add";
 
-    if (exType === "div"){
-      alert("➗ La division arrive bientôt 😊");
-      return;
-    }
     const names = readPlayerNames();
     const profile = $("screenProfile")?.value || "tni";
 

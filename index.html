@@ -11,7 +11,13 @@
   <div class="bg"></div>
 
   <header class="topbar">
-    <div class="brand">🎈 Math CE1</div>
+    <div class="brand">
+      <div class="app-tabs" id="appTabs" role="tablist" aria-label="Modules CE1">
+        <button type="button" class="app-tab active" data-app="math" aria-selected="true">🧮 Math CE1</button>
+        <button type="button" class="app-tab" data-app="english" aria-selected="false">🇬🇧 Anglais CE1</button>
+        <button type="button" class="app-tab app-tab-disabled" data-app="french" aria-selected="false" disabled>🇫🇷 Français CE1</button>
+      </div>
+    </div>
 
     <div class="topbar-actions">
       <!-- Réglages appli (modal) -->
@@ -49,7 +55,7 @@
                   <option value="add">➕ Addition</option>
                   <option value="sub">➖ Soustraction</option>
                   <option value="mul">✖️ Multiplication</option>
-                  <option value="div" disabled>➗ Division (bientôt)</option>
+                  <option value="div">➗ Division</option>
                 </select>
               </div>
 
@@ -88,13 +94,14 @@
             <!-- Options: rapides vs avancées -->
             <div class="options-head">
               <div class="options-head-left">
-                <div class="options-title" id="optionsTitle">⚡ Options rapides</div>
-                <div class="options-desc" id="optionsDesc">Réglages essentiels pour démarrer vite</div>
+                <div class="options-title">⚙️ Options</div>
+                <div class="options-desc">Choisis une vue : rapide ou avancée</div>
               </div>
 
-              <button id="btnAdvancedOnly" type="button" class="btn btn-mini btn-ghost">
-                ⚙️ Afficher seulement les options avancées
-              </button>
+              <div class="seg-tabs" id="optionsTabs" role="tablist" aria-label="Options">
+                <button type="button" class="seg-tab active" id="tabQuick" data-options="quick" aria-selected="true">⚡ Rapides</button>
+                <button type="button" class="seg-tab" id="tabAdvanced" data-options="advanced" aria-selected="false">🧠 Avancées</button>
+              </div>
             </div>
 
             <div class="opt-grid opt-grid-1" id="optionsQuick">
@@ -190,6 +197,76 @@
 
           <div class="card launch-card">
             <button id="btnStart" class="btn btn-primary btn-launch">▶️ Lancer la partie</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+
+    <!-- ENGLISH -->
+    <section id="screenEnglish" class="panel panel-wide hidden">
+      <div class="menu-title">
+        <h1>🇬🇧 Anglais CE1</h1>
+        <div class="menu-sub">Couleurs : clique sur une couleur pour voir le mot en anglais.</div>
+      </div>
+
+      <div class="menu-layout">
+        <div class="menu-col">
+          <div class="card">
+            <h2>🎨 Les couleurs</h2>
+
+            <div class="colors-grid" id="colorsGrid">
+              <button type="button" class="color-card" data-fr="Rouge" data-en="Red" style="--swatch:#ef4444">
+                <span class="swatch"></span>
+                <span class="label">Rouge</span>
+              </button>
+              <button type="button" class="color-card" data-fr="Bleu" data-en="Blue" style="--swatch:#3b82f6">
+                <span class="swatch"></span>
+                <span class="label">Bleu</span>
+              </button>
+              <button type="button" class="color-card" data-fr="Vert" data-en="Green" style="--swatch:#22c55e">
+                <span class="swatch"></span>
+                <span class="label">Vert</span>
+              </button>
+              <button type="button" class="color-card" data-fr="Jaune" data-en="Yellow" style="--swatch:#f59e0b">
+                <span class="swatch"></span>
+                <span class="label">Jaune</span>
+              </button>
+              <button type="button" class="color-card" data-fr="Orange" data-en="Orange" style="--swatch:#fb923c">
+                <span class="swatch"></span>
+                <span class="label">Orange</span>
+              </button>
+              <button type="button" class="color-card" data-fr="Violet" data-en="Purple" style="--swatch:#a855f7">
+                <span class="swatch"></span>
+                <span class="label">Violet</span>
+              </button>
+              <button type="button" class="color-card" data-fr="Rose" data-en="Pink" style="--swatch:#ec4899">
+                <span class="swatch"></span>
+                <span class="label">Rose</span>
+              </button>
+              <button type="button" class="color-card" data-fr="Marron" data-en="Brown" style="--swatch:#8b5a2b">
+                <span class="swatch"></span>
+                <span class="label">Marron</span>
+              </button>
+            </div>
+
+            <div class="ce1-text" style="margin-top:12px;">
+              <p><b>Astuce :</b> clique une carte pour basculer <b>FR ↔ EN</b> 😊</p>
+            </div>
+          </div>
+
+          <div class="card launch-card">
+            <button id="btnBackToMath" class="btn btn-primary btn-launch">↩️ Retour à Math</button>
+          </div>
+        </div>
+
+        <div class="menu-col">
+          <div class="card">
+            <h2>📌 À venir</h2>
+            <div class="ce1-text">
+              <p>✅ Couleurs</p>
+              <p>🔜 Animaux • Nombres • Petites phrases</p>
+            </div>
           </div>
         </div>
       </div>
