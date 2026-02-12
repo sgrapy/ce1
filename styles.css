@@ -280,11 +280,49 @@ body{
 .bg{
   position: fixed;
   inset: 0;
+  /* Fond par défaut (image 1) */
   background-image: url("assets/classroom-bg.png");
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
   z-index: -2;
+}
+
+/* Thèmes de fond (sélection Joueurs > Fond)
+   - Si certaines images ne sont pas présentes, les thèmes 6-8 utilisent un fond CSS.
+   - Tu peux remplacer/ajouter les fichiers plus tard sans toucher au code.
+*/
+.bg[data-theme="1"]{ background-image: url("assets/classroom-bg.png"); }
+.bg[data-theme="2"]{ background-image: url("assets/card-bg-1.png"); }
+.bg[data-theme="3"]{ background-image: url("assets/card-bg-2.png"); }
+.bg[data-theme="4"]{ background-image: url("assets/card-bg-3.png"); }
+.bg[data-theme="5"]{ background-image: url("assets/card-bg-4.png"); }
+
+/* Marvel (fallback) */
+.bg[data-theme="6"]{
+  background-image:
+    radial-gradient(1200px 600px at 20% 20%, rgba(255,0,0,0.35), transparent 55%),
+    radial-gradient(900px 500px at 80% 40%, rgba(255,255,255,0.18), transparent 60%),
+    linear-gradient(135deg, #0b0b10, #2b0000);
+}
+
+/* Star Wars (fallback) */
+.bg[data-theme="7"]{
+  background-image:
+    radial-gradient(1px 1px at 10% 15%, rgba(255,255,255,0.9), transparent 55%),
+    radial-gradient(1px 1px at 35% 65%, rgba(255,255,255,0.8), transparent 55%),
+    radial-gradient(1px 1px at 70% 25%, rgba(255,255,255,0.85), transparent 55%),
+    radial-gradient(1px 1px at 85% 75%, rgba(255,255,255,0.7), transparent 55%),
+    radial-gradient(900px 600px at 55% 40%, rgba(56,189,248,0.12), transparent 60%),
+    linear-gradient(135deg, #05070f, #0a0d1a);
+}
+
+/* Disney Princess (fallback) */
+.bg[data-theme="8"]{
+  background-image:
+    radial-gradient(900px 600px at 25% 30%, rgba(236,72,153,0.22), transparent 60%),
+    radial-gradient(900px 600px at 75% 60%, rgba(168,85,247,0.22), transparent 60%),
+    linear-gradient(135deg, #fff1f2, #fce7f3);
 }
 .bg::after{
   content:"";

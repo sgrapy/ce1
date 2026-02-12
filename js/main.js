@@ -7,7 +7,7 @@ import { showMenu, showGame, showEnglish } from "./ui/screens.js";
 import { renderGrid } from "./ui/grid.js";
 import { renderBalloons } from "./ui/balloons.js";
 import { renderKeypad, setKeypadVisible, setKeypadLocked } from "./ui/keypad.js";
-import { renderPlayerInputs, readPlayerNames, readPlayerTeams } from "./ui/menu.js";
+import { renderPlayerInputs, readPlayerNames, readPlayerTeams, readPlayerBgs } from "./ui/menu.js";
 import { renderAdditionBase10Explanation } from "./ui/additionBase10Explain.js";
 
 import { loadPrefs, savePrefs, resetPrefs } from "./storage/prefs.js";
@@ -20,65 +20,22 @@ import { makeSkillLabel as makeMulLabel } from "./engine/questions/multiplicatio
 import { makeSkillLabel as makeDivLabel } from "./engine/questions/division.js";
 import { makeSkillLabel as makeEngLabel } from "./engine/questions/english.js";
 
-
-
+// ------------------------------------------------------------
+// Mode prof (header)
+// ------------------------------------------------------------
 function openProfModal(){
   const m = $("profModal");
   if (!m) return;
   m.classList.remove("hidden");
   m.setAttribute("aria-hidden", "false");
 }
+
 function closeProfModal(){
   const m = $("profModal");
   if (!m) return;
   m.classList.add("hidden");
   m.setAttribute("aria-hidden", "true");
-  const content = $("profContent");
-  if (content) content.innerHTML = "";
 }
-
-document.addEventListener("DOMContentLoaded", () => {
-  // ✅ Ouvre la modal prof depuis le header
-  $("btnProf")?.addEventListener("click", (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    openProfModal();
-  });
-
-  // ✅ Fermer
-  $("btnCloseProf")?.addEventListener("click", closeProfModal);
-  $("profBackdrop")?.addEventListener("click", closeProfModal);
-
-  // ✅ ESC ferme
-  document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape") closeProfModal();
-  });
-
-  // ✅ Boutons
-  $("btnOpenStats")?.addEventListener("click", () => {
-    // Si tu as déjà une modal stats existante :
-    if (typeof openStatsModal === "function") return openStatsModal();
-
-    // Sinon : fallback simple (tu peux remplacer)
-    const box = $("profContent");
-    if (box) box.innerHTML = `<div class="card">📊 (Ici tu affiches tes stats/records)</div>`;
-  });
-
-  $("btnResetStats")?.addEventListener("click", () => {
-    const ok = confirm("⚠️ Réinitialiser toutes les stats et records ?");
-    if (!ok) return;
-
-    if (typeof resetAllStats === "function") resetAllStats();
-    else {
-      // fallback si tu n'as pas de helper
-      localStorage.removeItem("ce1_stats");
-      localStorage.removeItem("ce1_records");
-    }
-
-    const box = $("profContent");
-    if (box) box.innerHTML = `<div class="card">✅ Stats réinitialisées.</div>`;
-  });
-});
 
 
 // ------------------------------------------------------------
@@ -104,36 +61,7 @@ function openModal(id){
 function closeModal(id){
   $(id)?.classList.add("hidden");
 }
-// ------------------------------------------------------------
-// Mode prof modal wiring (header)
-// ------------------------------------------------------------
-$("btnProf")?.addEventListener("click", (e) => {
-  e.preventDefault();
-  e.stopPropagation();
-  openProfModal();
-});
-
-$("btnCloseProf")?.addEventListener("click", closeProfModal);
-$("profBackdrop")?.addEventListener("click", closeProfModal);
-
-document.addEventListener("keydown", (e) => {
-  if (e.key === "Escape") closeProfModal();
-});
-
-// Ouvrir Stats depuis la modal prof (réutilise la modal stats existante)
-$("btnOpenStatsProf")?.addEventListener("click", () => {
-  closeProfModal();
-  renderStatsModal();
-  openModal("statsModal");
-});
-
-// Reset stats depuis la modal prof
-$("btnResetStatsProf")?.addEventListener("click", () => {
-  if (!confirm("Reset des statistiques et records ?")) return;
-  resetStatsStore();
-  renderStatsModal();
-  alert("✅ Stats effacées.");
-});
+// (wiring fait dans DOMContentLoaded plus bas)
 
 function wireModalBackdrops(){
   document.querySelectorAll(".modal-backdrop[data-close='1']").forEach(backdrop => {
@@ -1384,9 +1312,10 @@ function syncTeamUI(){
   const pc = Number($("playersCount")?.value || 1);
   const names = readPlayerNames();
   const teams = readPlayerTeams();
+  const bgs = readPlayerBgs();
   const teamCount = Number($("teamCount")?.value || 2);
 
-  renderPlayerInputs(pc, names, { teamMode, teamCount, teams });
+  renderPlayerInputs(pc, names, { teamMode, teamCount, teams, bgs });
 }
 
 function syncExpertUI(){
@@ -1422,6 +1351,15 @@ document.addEventListener("DOMContentLoaded", () => {
   wireStatsTabs();
 
   // ------------------------------------------------------------
+  // Fond (menu Joueurs)
+  // ------------------------------------------------------------
+  function applyBackgroundTheme(theme){
+    const bg = document.querySelector(".bg");
+    if (!bg) return;
+    bg.setAttribute("data-theme", String(theme || 1));
+  }
+
+  // ------------------------------------------------------------
   // App tabs (Math / Anglais / Français)
   // ------------------------------------------------------------
   function setActiveApp(app){
@@ -1438,8 +1376,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Mode appli : filtre les exercices + contraintes UI
     const exSel = $("exerciseType");
+    const optEng = $("optEng");
     const ansSel = $("answerMode");
     if (app === "english"){
+      // Affiche l'option Anglais dans le select seulement sur l'onglet Anglais
+      if (optEng) optEng.hidden = false;
       // force Anglais
       if (exSel){ exSel.value = "eng"; exSel.disabled = true; }
       // Anglais = QCM (pour l'instant)
@@ -1447,8 +1388,12 @@ document.addEventListener("DOMContentLoaded", () => {
       renderMathSettings("eng", loadPrefs()?.exerciseSettings || {});
       $("mathTitle")?.scrollIntoView?.({ block: "nearest" });
     } else {
+      // Cache l'option Anglais quand on est en Math
+      if (optEng) optEng.hidden = true;
       if (exSel){ exSel.disabled = false; }
       if (ansSel){ ansSel.disabled = false; }
+      // Si on revient en Math avec "eng" sélectionné, on repasse sur Addition
+      if (exSel && exSel.value === "eng") exSel.value = "add";
       // re-rendu réglages selon exercice actuel
       if (exSel) renderMathSettings(exSel.value, loadPrefs()?.exerciseSettings || {});
     }
@@ -1490,7 +1435,9 @@ document.addEventListener("DOMContentLoaded", () => {
   const answerMode   = prefs.answerMode  || $("answerMode")?.value  || "mcq";
   let exerciseType = prefs.exerciseType || $("exerciseType")?.value || "add";
   const playerNames  = prefs.playerNames || ["", "", "", ""];
+  const playerBgs    = prefs.playerBgs   || [1, 2, 3, 4];
   const screenProfile = prefs.screenProfile || $("screenProfile")?.value || "tni";
+  const bgTheme = prefs.bgTheme || $("bgTheme")?.value || "1";
 
   const gameMode = prefs.gameMode || $("gameMode")?.value || "time";
   const raceTarget = Number(prefs.raceTarget || $("raceTarget")?.value || 10);
@@ -1508,6 +1455,22 @@ document.addEventListener("DOMContentLoaded", () => {
   if ($("answerMode")) $("answerMode").value = answerMode;
   if ($("exerciseType")) $("exerciseType").value = exerciseType;
   if ($("screenProfile")) $("screenProfile").value = screenProfile;
+  if ($("bgTheme")) $("bgTheme").value = String(bgTheme);
+
+  // applique fond tout de suite
+  applyBackgroundTheme(bgTheme);
+
+  // change fond
+  $("bgTheme")?.addEventListener("change", () => {
+    const next = $("bgTheme")?.value || "1";
+    applyBackgroundTheme(next);
+    // on sauvegarde immédiatement (même avant de lancer une partie)
+    const cur = loadPrefs();
+    savePrefs({ ...cur, bgTheme: String(next) });
+  });
+
+  // Initialise l'onglet actif (Math par défaut) + cache l'option Anglais dans le select
+  setActiveApp("math");
 
   if ($("gameMode")) $("gameMode").value = gameMode;
   if ($("raceTarget")) $("raceTarget").value = String(raceTarget);
@@ -1534,7 +1497,7 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   // players inputs (avec équipes si besoin)
-  renderPlayerInputs(playersCount, playerNames, { teamMode, teamCount, teams: playerTeams });
+  renderPlayerInputs(playersCount, playerNames, { teamMode, teamCount, teams: playerTeams, bgs: playerBgs });
 
     // UI sync
   // Vue options: si on a déjà activé une option avancée, on ouvre directement l'onglet avancé
@@ -1576,12 +1539,15 @@ $("expertMode")?.addEventListener("change", () => {
     const n = Number($("playersCount").value);
     const current = readPlayerNames();
     const currentTeams = readPlayerTeams();
+    const currentBgs = readPlayerBgs();
     const nextNames = Array.from({ length: n }, (_, i) => current[i] || "");
     const nextTeams = Array.from({ length: n }, (_, i) => (Number.isFinite(currentTeams[i]) ? currentTeams[i] : (i % 2)));
+    const nextBgs = Array.from({ length: n }, (_, i) => (Number.isFinite(currentBgs[i]) ? currentBgs[i] : ((i % 4) + 1)));
     renderPlayerInputs(n, nextNames, {
       teamMode: $("teamMode")?.checked,
       teamCount: Number($("teamCount")?.value || 2),
-      teams: nextTeams
+      teams: nextTeams,
+      bgs: nextBgs
     });
   });
 
@@ -1590,6 +1556,18 @@ $("expertMode")?.addEventListener("change", () => {
     openModal("appSettingsModal");
   });
   $("btnCloseSettings")?.addEventListener("click", () => closeModal("appSettingsModal"));
+
+  // Mode prof (header)
+  $("btnProf")?.addEventListener("click", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    openProfModal();
+  });
+  $("btnCloseProf")?.addEventListener("click", closeProfModal);
+  $("profBackdrop")?.addEventListener("click", closeProfModal);
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") closeProfModal();
+  });
 
   // Stats modal
   $("btnOpenStats")?.addEventListener("click", () => {
@@ -1606,6 +1584,17 @@ $("expertMode")?.addEventListener("change", () => {
   }
   $("btnResetStats")?.addEventListener("click", doResetStats);
   $("btnResetStats2")?.addEventListener("click", doResetStats);
+
+  // Boutons dans la modal "Mode prof"
+  $("btnOpenStatsProf")?.addEventListener("click", () => {
+    closeProfModal();
+    renderStatsModal();
+    openModal("statsModal");
+  });
+  $("btnResetStatsProf")?.addEventListener("click", () => {
+    closeProfModal();
+    doResetStats();
+  });
 
   // Results modal
   $("btnCloseResults")?.addEventListener("click", () => {
@@ -1641,7 +1630,9 @@ $("expertMode")?.addEventListener("change", () => {
     const exType = $("exerciseType")?.value || "add";
 
     const names = readPlayerNames();
+    const bgs = readPlayerBgs();
     const profile = $("screenProfile")?.value || "tni";
+    const theme = $("bgTheme")?.value || "1";
 
     const gm = $("gameMode")?.value || "time";
     const target = Number($("raceTarget")?.value || 10);
@@ -1659,8 +1650,10 @@ $("expertMode")?.addEventListener("change", () => {
     // save prefs
     savePrefs({
       screenProfile: profile,
+      bgTheme: theme,
       playersCount: pc,
       playerNames: names,
+      playerBgs: bgs,
       durationSec: dur,
       answerMode: ansMode,
       exerciseType: exType,
@@ -1687,7 +1680,7 @@ $("expertMode")?.addEventListener("change", () => {
 
     // Grid
     const layout = layoutFor(profile, pc);
-    renderGrid({ layout, playersCount: pc, names });
+    renderGrid({ layout, playersCount: pc, names, bgs });
 
     // Engine
     ENGINE = createEngine({ exerciseType: exType, settings, playersCount: pc, answerMode: ansMode });

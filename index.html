@@ -20,6 +20,9 @@
     </div>
 
     <div class="topbar-actions">
+      <!-- Mode prof (header) -->
+      <button id="btnProf" class="btn btn-ghost" title="Mode prof">👨‍🏫</button>
+
       <!-- Réglages appli (modal) -->
       <button id="btnSettings" class="btn btn-ghost" title="Réglages">⚙️</button>
 
@@ -56,7 +59,8 @@
                   <option value="sub">➖ Soustraction</option>
                   <option value="mul">✖️ Multiplication</option>
                   <option value="div">➗ Division</option>
-                  <option value="eng">🇬🇧 Anglais (Couleurs)</option>
+                  <!-- Anglais : visible seulement quand on est sur l'onglet Anglais -->
+                  <option value="eng" id="optEng" hidden>🇬🇧 Anglais (Couleurs)</option>
                 </select>
               </div>
 
@@ -173,6 +177,20 @@
                   <option value="4" selected>4</option>
                 </select>
               </div>
+
+              <div class="field">
+                <label>Fond</label>
+                <select id="bgTheme">
+                  <option value="1">🏫 École (image 1)</option>
+                  <option value="2">☁️ Nuages (image 2)</option>
+                  <option value="3">⚡ Pokémon (image 3)</option>
+                  <option value="4">🎤 K‑Pop (image 4)</option>
+                  <option value="5">🏰 Disney (image 5)</option>
+                  <option value="6">🦸 Marvel (image 6)</option>
+                  <option value="7">🌌 Star Wars (image 7)</option>
+                  <option value="8">👑 Disney Princess (image 8)</option>
+                </select>
+              </div>
             </div>
 
             <div id="playersInputs" class="players-inputs players-nice"></div>
@@ -185,15 +203,6 @@
           <div class="card">
             <h2 id="mathTitle">⚙️ Réglages (Addition)</h2>
             <div id="mathSettings" class="math-grid nice-grid"></div>
-          </div>
-
-          <div class="card">
-            <h2>👨‍🏫 Mode prof</h2>
-            <div class="row2">
-              <button id="btnOpenStats" class="btn">📊 Stats & Records</button>
-              <button id="btnResetStats" class="btn btn-ghost">🧹 Reset stats</button>
-            </div>
-            <small>Les stats/records sont enregistrés sur cet appareil (localStorage).</small>
           </div>
 
           <div class="card launch-card">
@@ -340,6 +349,29 @@
 
       <div class="modal-footer">
         <button id="btnResetStats2" class="btn btn-ghost">🧹 Reset stats</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Mode prof (header) -->
+  <div id="profModal" class="modal hidden" aria-hidden="true">
+    <div id="profBackdrop" class="modal-backdrop"></div>
+
+    <div class="modal-card">
+      <div class="modal-head">
+        <h2>👨‍🏫 Mode prof</h2>
+        <button class="btn btn-ghost" id="btnCloseProf">✕</button>
+      </div>
+
+      <div class="settings-grid">
+        <div class="field">
+          <label>Outils</label>
+          <div class="row2">
+            <button id="btnOpenStatsProf" class="btn">📊 Stats & Records</button>
+            <button id="btnResetStatsProf" class="btn btn-ghost">🧹 Reset stats</button>
+          </div>
+          <small>Les stats/records sont enregistrés sur cet appareil (localStorage).</small>
+        </div>
       </div>
     </div>
   </div>

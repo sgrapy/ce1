@@ -3,7 +3,7 @@ import { $, escapeHtml } from "./dom.js";
 export const COLORS = ["#ef4444", "#3b82f6", "#22c55e", "#f59e0b"];
 export const BALLOON_HUES = [140, 0, 250, 185];
 
-export function renderGrid({ layout, playersCount, names }) {
+export function renderGrid({ layout, playersCount, names, bgs = [] }) {
   const grid = $("gameGrid");
   grid.style.gridTemplateColumns = `repeat(${layout.cols}, minmax(0,1fr))`;
   grid.style.gridTemplateRows = `repeat(${layout.rows}, minmax(0,1fr))`;
@@ -12,7 +12,8 @@ export function renderGrid({ layout, playersCount, names }) {
   for (let i = 0; i < playersCount; i++) {
     const card = document.createElement("div");
     card.className = "player-card";
-    card.style.setProperty("--card-bg", `url("assets/card-bg-${i+1}.png")`);
+        const bgId = Number.isFinite(Number(bgs[i])) ? Number(bgs[i]) : ((i % 4) + 1);
+    card.style.setProperty("--card-bg", `url("assets/card-bg-${bgId}.png")`);
     card.style.outline = `3px solid ${COLORS[i]}`;
     card.style.outlineOffset = "-3px";
 
