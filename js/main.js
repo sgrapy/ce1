@@ -1312,11 +1312,14 @@ function syncTeamUI(){
   const pc = Number($("playersCount")?.value || 1);
   const names = readPlayerNames();
   const teams = readPlayerTeams();
-  const bgs = readPlayerBgs();
   const teamCount = Number($("teamCount")?.value || 2);
 
-  renderPlayerInputs(pc, names, { teamMode, teamCount, teams, bgs });
+  const customBg = $("customBg")?.checked ?? true;
+  const bgs = customBg ? readPlayerBgs() : [];
+
+  renderPlayerInputs(pc, names, { teamMode, teamCount, teams, bgs, customBg });
 }
+
 
 function syncExpertUI(){
   const expert = $("expertMode")?.checked;
@@ -1349,15 +1352,6 @@ document.addEventListener("DOMContentLoaded", () => {
   showMenu();
   wireModalBackdrops();
   wireStatsTabs();
-
-  // ------------------------------------------------------------
-  // Fond (menu Joueurs)
-  // ------------------------------------------------------------
-  function applyBackgroundTheme(theme){
-    const bg = document.querySelector(".bg");
-    if (!bg) return;
-    bg.setAttribute("data-theme", String(theme || 1));
-  }
 
   // ------------------------------------------------------------
   // App tabs (Math / Anglais / Français)
@@ -1435,9 +1429,8 @@ document.addEventListener("DOMContentLoaded", () => {
   const answerMode   = prefs.answerMode  || $("answerMode")?.value  || "mcq";
   let exerciseType = prefs.exerciseType || $("exerciseType")?.value || "add";
   const playerNames  = prefs.playerNames || ["", "", "", ""];
-  const playerBgs    = prefs.playerBgs   || [1, 2, 3, 4];
+  const playerBgs    = prefs.playerBgs   || [1, 2, 1, 2];
   const screenProfile = prefs.screenProfile || $("screenProfile")?.value || "tni";
-  const bgTheme = prefs.bgTheme || $("bgTheme")?.value || "1";
 
   const gameMode = prefs.gameMode || $("gameMode")?.value || "time";
   const raceTarget = Number(prefs.raceTarget || $("raceTarget")?.value || 10);
@@ -1449,25 +1442,15 @@ document.addEventListener("DOMContentLoaded", () => {
   const teamCount = Number(prefs.teamCount || $("teamCount")?.value || 2);
   const playerTeams = Array.isArray(prefs.playerTeams) ? prefs.playerTeams : [];
 
+  const customBg = (prefs.customBg ?? $("customBg")?.checked ?? true);
+
   // apply values
   if ($("playersCount")) $("playersCount").value = String(playersCount);
   if ($("durationSec")) $("durationSec").value = String(durationSec);
   if ($("answerMode")) $("answerMode").value = answerMode;
   if ($("exerciseType")) $("exerciseType").value = exerciseType;
   if ($("screenProfile")) $("screenProfile").value = screenProfile;
-  if ($("bgTheme")) $("bgTheme").value = String(bgTheme);
-
-  // applique fond tout de suite
-  applyBackgroundTheme(bgTheme);
-
-  // change fond
-  $("bgTheme")?.addEventListener("change", () => {
-    const next = $("bgTheme")?.value || "1";
-    applyBackgroundTheme(next);
-    // on sauvegarde immédiatement (même avant de lancer une partie)
-    const cur = loadPrefs();
-    savePrefs({ ...cur, bgTheme: String(next) });
-  });
+  if ($("customBg")) $("customBg").checked = !!customBg;
 
   // Initialise l'onglet actif (Math par défaut) + cache l'option Anglais dans le select
   setActiveApp("math");
@@ -1497,7 +1480,7 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   // players inputs (avec équipes si besoin)
-  renderPlayerInputs(playersCount, playerNames, { teamMode, teamCount, teams: playerTeams, bgs: playerBgs });
+  renderPlayerInputs(playersCount, playerNames, { teamMode, teamCount, teams: playerTeams, bgs: playerBgs, customBg });
 
     // UI sync
   // Vue options: si on a déjà activé une option avancée, on ouvre directement l'onglet avancé
@@ -1535,19 +1518,29 @@ $("expertMode")?.addEventListener("change", () => {
     syncTeamUI();
   });
 
+  $("customBg")?.addEventListener("change", () => {
+    // ré-affiche/masque les menus de fond par joueur
+    syncTeamUI();
+    // sauvegarde immédiate
+    const cur = loadPrefs();
+    savePrefs({ ...cur, customBg: ($("customBg")?.checked ?? true) });
+  });
+
   $("playersCount")?.addEventListener("change", () => {
     const n = Number($("playersCount").value);
     const current = readPlayerNames();
     const currentTeams = readPlayerTeams();
-    const currentBgs = readPlayerBgs();
+    const customBg = $("customBg")?.checked ?? true;
+    const currentBgs = customBg ? readPlayerBgs() : [];
     const nextNames = Array.from({ length: n }, (_, i) => current[i] || "");
     const nextTeams = Array.from({ length: n }, (_, i) => (Number.isFinite(currentTeams[i]) ? currentTeams[i] : (i % 2)));
-    const nextBgs = Array.from({ length: n }, (_, i) => (Number.isFinite(currentBgs[i]) ? currentBgs[i] : ((i % 4) + 1)));
+    const nextBgs = Array.from({ length: n }, (_, i) => (Number.isFinite(currentBgs[i]) ? currentBgs[i] : ((i % 2) + 1)));
     renderPlayerInputs(n, nextNames, {
       teamMode: $("teamMode")?.checked,
       teamCount: Number($("teamCount")?.value || 2),
       teams: nextTeams,
-      bgs: nextBgs
+      bgs: nextBgs,
+      customBg
     });
   });
 
@@ -1630,9 +1623,11 @@ $("expertMode")?.addEventListener("change", () => {
     const exType = $("exerciseType")?.value || "add";
 
     const names = readPlayerNames();
-    const bgs = readPlayerBgs();
+
+    const customBg = $("customBg")?.checked ?? true;
+    const bgs = customBg ? readPlayerBgs() : Array.from({ length: pc }, (_, i) => ((i % 2) + 1));
+
     const profile = $("screenProfile")?.value || "tni";
-    const theme = $("bgTheme")?.value || "1";
 
     const gm = $("gameMode")?.value || "time";
     const target = Number($("raceTarget")?.value || 10);
@@ -1650,7 +1645,7 @@ $("expertMode")?.addEventListener("change", () => {
     // save prefs
     savePrefs({
       screenProfile: profile,
-      bgTheme: theme,
+      customBg,
       playersCount: pc,
       playerNames: names,
       playerBgs: bgs,
