@@ -36,14 +36,16 @@ function computeBalloonLayout(stage, count){
     heightFactor = 0.70;
     minPreferredWidth = 82;
   } else {
-    // Cas dense : 5 ballons (notamment 4 joueurs) → on force plus d'air entre eux.
-    sideGap = Math.max(16, Math.min(28, stageWidth * 0.05));
+    // Cas dense : 5 ballons (notamment 4 joueurs).
+    // On garde de l'air entre eux, mais un peu moins qu'avant pour
+    // leur rendre de la taille sans recréer les clics parasites.
+    sideGap = Math.max(12, Math.min(22, stageWidth * 0.04));
     betweenGap = narrowStage
-      ? 18
-      : Math.max(15, Math.min(22, stageWidth * 0.03));
-    widthCap = narrowStage ? 170 : 180;
-    heightFactor = narrowStage ? 0.64 : 0.68;
-    minPreferredWidth = 64;
+      ? 14
+      : Math.max(12, Math.min(18, stageWidth * 0.024));
+    widthCap = narrowStage ? 176 : 188;
+    heightFactor = narrowStage ? 0.66 : 0.69;
+    minPreferredWidth = 66;
   }
 
   const usableWidth = Math.max(
