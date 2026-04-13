@@ -8,33 +8,67 @@ function computeBalloonLayout(stage, count){
 
   const stageWidth = Math.max(stageRect.width || parentRect.width || stage?.clientWidth || 0, 320);
   const stageHeight = Math.max(stageRect.height || parentRect.height || stage?.clientHeight || 0, 220);
+  const narrowStage = stageWidth < 420;
 
-  const sideGap = Math.max(10, Math.min(28, stageWidth * 0.03));
-  const usableWidth = Math.max(stageWidth - sideGap * 2, stageWidth * 0.86);
+  let sideGap;
+  let betweenGap;
+  let widthCap;
+  let heightFactor;
+  let minPreferredWidth;
+
+  if (count <= 2){
+    // En 2 joueurs on garde des ballons plus généreux.
+    sideGap = Math.max(10, Math.min(18, stageWidth * 0.03));
+    betweenGap = Math.max(14, Math.min(28, stageWidth * 0.028));
+    widthCap = 270;
+    heightFactor = 0.78;
+    minPreferredWidth = count === 1 ? 120 : 110;
+  } else if (count === 3){
+    sideGap = Math.max(12, Math.min(20, stageWidth * 0.035));
+    betweenGap = Math.max(10, Math.min(18, stageWidth * 0.02));
+    widthCap = 225;
+    heightFactor = 0.74;
+    minPreferredWidth = 95;
+  } else if (count === 4){
+    sideGap = Math.max(14, Math.min(22, stageWidth * 0.04));
+    betweenGap = Math.max(10, Math.min(18, stageWidth * 0.024));
+    widthCap = 195;
+    heightFactor = 0.70;
+    minPreferredWidth = 82;
+  } else {
+    // Cas dense : 5 ballons (notamment 4 joueurs) → on force plus d'air entre eux.
+    sideGap = Math.max(16, Math.min(28, stageWidth * 0.05));
+    betweenGap = narrowStage
+      ? 18
+      : Math.max(15, Math.min(22, stageWidth * 0.03));
+    widthCap = narrowStage ? 170 : 180;
+    heightFactor = narrowStage ? 0.64 : 0.68;
+    minPreferredWidth = 64;
+  }
+
+  const usableWidth = Math.max(
+    stageWidth - (sideGap * 2) - (betweenGap * Math.max(count - 1, 0)),
+    0
+  );
   const slotWidth = usableWidth / Math.max(count, 1);
 
-  // Taille pilotée par l'espace horizontal ET vertical disponible.
-  // On garde une vraie taille mini, mais sans créer de chevauchement.
+  // Important : ne jamais dépasser la case dispo, sinon on recrée du chevauchement.
   const width = Math.round(
-    Math.max(
-      96,
-      Math.min(
-        210,
-        slotWidth * 0.9,
-        stageHeight * 0.72
-      )
+    Math.min(
+      slotWidth,
+      Math.max(minPreferredWidth, Math.min(widthCap, stageHeight * heightFactor))
     )
   );
 
   const labelSize = Math.round(
-    Math.max(20, Math.min(54, width * 0.24))
+    Math.max(16, Math.min(54, width * (count >= 5 ? 0.22 : 0.24)))
   );
 
-  const bottomOffset = Math.round(-width * 0.34);
+  const bottomOffset = Math.round(-width * (count >= 5 ? 0.31 : 0.34));
 
   const positions = Array.from({ length: count }, (_, idx) => {
-    const center = sideGap + (slotWidth * idx) + (slotWidth / 2);
-    const left = Math.round(center - width / 2);
+    const cellLeft = sideGap + idx * (slotWidth + betweenGap);
+    const left = Math.round(cellLeft + ((slotWidth - width) / 2));
     return left;
   });
 
