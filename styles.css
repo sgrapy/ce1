@@ -604,7 +604,7 @@ body{
 
 .balloon{
   position: absolute;
-  bottom: -45%;
+  bottom: var(--balloon-bottom, -70px);
   width: var(--balloon-width, min(34vw, 210px));
   aspect-ratio: 1 / 1.15;
   border: none;

@@ -1673,6 +1673,9 @@ $("expertMode")?.addEventListener("change", () => {
     $("hudSkill").textContent = makeHudSkill(exType, settings, 0);
     $("hudTimer").textContent = gm === "time" ? `⏱ ${dur}s` : `🏁 ${target} pts`;
 
+    // On affiche d'abord l'écran de jeu pour que les zones aient leur vraie taille
+    showGame();
+
     // Grid
     const layout = layoutFor(profile, pc);
     renderGrid({ layout, playersCount: pc, names, bgs });
@@ -1698,13 +1701,13 @@ $("expertMode")?.addEventListener("change", () => {
       answerMode: ansMode
     });
 
-    // Start loops
+    // Start loops après le rendu effectif, sinon la 1re question peut être mal dimensionnée
     GAME_RUNNING = true;
     qTimers = Array.from({ length: pc }, () => null);
-    for (let i = 0; i < pc; i++) startPlayer(i);
-
-    showGame();
-    startHudClock();
+    requestAnimationFrame(() => {
+      for (let i = 0; i < pc; i++) startPlayer(i);
+      startHudClock();
+    });
   });
 
   // End buttons (sauvegarde + résultats)
